@@ -59,8 +59,19 @@
 
   <!-- Controles (abajo derecha) -->
   <div id="panel-controls" class="ui-panel stagger-4 fixed bottom-3 right-3 z-20 px-3 py-2 flex gap-2">
+    <button id="btn-prev-star" class="brass-btn" title="Astro anterior">◀ ASTRO</button>
+    <button id="btn-next-star" class="brass-btn" title="Astro siguiente">ASTRO ▶</button>
     <button id="btn-mode" class="brass-btn" title="Alternar sensores / arrastre manual">☸ MODO AR</button>
     <button id="btn-sound" class="brass-btn" title="Sonido del mar">♪ MAR</button>
+  </div>
+
+  <!-- Tarjeta del astro seleccionado (abajo centro) -->
+  <div id="panel-star" class="ui-panel hidden fixed bottom-16 inset-x-0 mx-auto z-20 px-5 py-3 text-center max-w-[92vw] w-[26rem]">
+    <button id="btn-star-close" class="absolute top-1 right-2 font-terminal text-parchment text-sm hover:text-red-400" title="Soltar el astro">✕</button>
+    <h2 id="star-name" class="font-display text-brass-bright text-2xl leading-none">—</h2>
+    <div id="star-constellation" class="font-fell italic text-parchment text-sm mt-0.5">—</div>
+    <div id="star-data" class="font-terminal text-phosphor text-sm mt-1">—</div>
+    <div id="star-lore" class="font-fell italic text-parchment text-xs mt-1 opacity-80">—</div>
   </div>
 
   <!-- ═══════════ OVERLAY DE INICIO ═══════════ -->

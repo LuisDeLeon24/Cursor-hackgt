@@ -61,7 +61,9 @@ function updateObserverReadout() {
   document.getElementById('obs-lon').textContent = fmt(lon, 'E', 'O');
 }
 
-/* ── Giroscopio / brújula ── */
+/* ── Giroscopio / brújula (con filtro paso-bajo contra el jitter) ── */
+const GYRO_SMOOTH = 0.18;   // 0..1: menor = más suave
+
 function handleOrientation(e) {
   if (!App.state.modeAR) return;
   if (e.alpha === null || e.alpha === undefined) return;
@@ -73,12 +75,15 @@ function handleOrientation(e) {
     ? e.webkitCompassHeading
     : 360 - e.alpha;
 
-  App.state.rotacionBrujula = ((heading % 360) + 360) % 360;
+  // suavizado exponencial por el camino angular más corto
+  const cur = App.state.rotacionBrujula;
+  const dAz = ((heading - cur + 540) % 360) - 180;
+  App.state.rotacionBrujula = ((cur + dAz * GYRO_SMOOTH) % 360 + 360) % 360;
 
   // beta ≈ 90° con el móvil vertical apuntando al horizonte
   if (typeof e.beta === 'number') {
     const pitch = Math.max(-80, Math.min(80, e.beta - 90));
-    App.state.pitchOffset = pitch;
+    App.state.pitchOffset += (pitch - App.state.pitchOffset) * GYRO_SMOOTH;
   }
 }
 
@@ -119,17 +124,27 @@ function setMode(ar) {
   }
 }
 
-/* ── Fallback: arrastre con ratón o dedo ── */
+/* ── Fallback: arrastre con ratón o dedo, con inercia ── */
 function initDragFallback() {
   const canvas = document.getElementById('sky-canvas');
   let dragging = false;
   let lastX = 0, lastY = 0;
+  let velAz = 0, velPitch = 0;   // grados/frame que quedan "vivos" al soltar
 
-  const start = (x, y) => { dragging = true; lastX = x; lastY = y; canvas.classList.add('dragging'); };
+  const start = (x, y) => {
+    dragging = true;
+    lastX = x; lastY = y;
+    velAz = 0; velPitch = 0;
+    App.state.autoPan = false;   // el navegante toma el timón: cancelar auto-pan
+    canvas.classList.add('dragging');
+  };
   const move = (x, y) => {
     if (!dragging || App.state.modeAR) return;
-    App.state.rotacionBrujula = ((App.state.rotacionBrujula - (x - lastX) * 0.35) % 360 + 360) % 360;
-    App.state.pitchOffset = Math.max(-80, Math.min(80, App.state.pitchOffset + (y - lastY) * 0.22));
+    const dAz = -(x - lastX) * 0.35;
+    const dPitch = (y - lastY) * 0.22;
+    App.state.rotacionBrujula = ((App.state.rotacionBrujula + dAz) % 360 + 360) % 360;
+    App.state.pitchOffset = Math.max(-80, Math.min(80, App.state.pitchOffset + dPitch));
+    velAz = dAz; velPitch = dPitch;
     lastX = x; lastY = y;
   };
   const end = () => { dragging = false; canvas.classList.remove('dragging'); };
@@ -138,6 +153,17 @@ function initDragFallback() {
   window.addEventListener('pointermove', (e) => move(e.clientX, e.clientY));
   window.addEventListener('pointerup', end);
   window.addEventListener('pointercancel', end);
+
+  // Inercia: el cielo sigue girando al soltar, amortiguándose
+  App.hooks.updateView = () => {
+    if (App.state.autoPan) { velAz = 0; velPitch = 0; return; }
+    if (dragging || App.state.modeAR) return;
+    if (Math.abs(velAz) < 0.01 && Math.abs(velPitch) < 0.01) return;
+    App.state.rotacionBrujula = ((App.state.rotacionBrujula + velAz) % 360 + 360) % 360;
+    App.state.pitchOffset = Math.max(-80, Math.min(80, App.state.pitchOffset + velPitch));
+    velAz *= 0.92;
+    velPitch *= 0.92;
+  };
 }
 
 /* ── Zarpar: se ejecuta con el gesto del botón de inicio ── */
