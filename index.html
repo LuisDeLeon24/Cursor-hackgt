@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SextantAR — El Sextante del Siglo XXI</title>
+  <meta name="description" content="Sextante de Realidad Aumentada: rastrea la ISS y el Hubble en tiempo real con SGP4 sobre la cámara de tu dispositivo." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='44' fill='none' stroke='%23d4a638' stroke-width='6'/%3E%3Ccircle cx='50' cy='50' r='6' fill='%2339ff14'/%3E%3Cpath d='M50 6 v20 M50 74 v20 M6 50 h20 M74 50 h20' stroke='%23d4a638' stroke-width='5'/%3E%3C/svg%3E" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=IM+Fell+English:ital@0;1&family=VT323&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="bg-abyss overflow-hidden select-none">
+
+  <!-- Cámara de fondo -->
+  <video id="camera-feed" autoplay playsinline muted class="fixed inset-0 w-full h-full object-cover"></video>
+  <div id="camera-tint" class="fixed inset-0 pointer-events-none"></div>
+
+  <!-- Firmamento -->
+  <canvas id="sky-canvas" class="fixed inset-0 touch-none"></canvas>
+
+  <!-- Viñeta del visor -->
+  <div id="vignette" class="fixed inset-0 pointer-events-none"></div>
+
+  <!-- ═══════════ PANELES DE INSTRUMENTOS ═══════════ -->
+
+  <!-- Estado del navío (arriba izquierda) -->
+  <div id="panel-status" class="ui-panel stagger-1 fixed top-3 left-3 z-20 px-4 py-3 max-w-[46vw]">
+    <h2 class="panel-title">≋ BITÁCORA ≋</h2>
+    <div class="font-terminal text-phosphor text-sm leading-snug">
+      <div>LAT&nbsp;&nbsp;<span id="obs-lat">--.----</span></div>
+      <div>LON&nbsp;&nbsp;<span id="obs-lon">--.----</span></div>
+      <div>UTC&nbsp;&nbsp;<span id="clock-utc">--:--:--</span></div>
+      <div>MODO <span id="mode-label" class="text-brass-bright">MANUAL</span></div>
+    </div>
+  </div>
+
+  <!-- Satélites (arriba derecha) -->
+  <div id="panel-sats" class="ui-panel stagger-2 fixed top-3 right-3 z-20 px-4 py-3 text-right max-w-[48vw]">
+    <h2 class="panel-title">☄ CONTACTOS ORBITALES ☄</h2>
+    <div id="sat-list" class="font-terminal text-phosphor text-sm leading-snug">
+      <div class="opacity-60">ESCUCHANDO EL ÉTER...</div>
+    </div>
+  </div>
+
+  <!-- Rumbo (abajo izquierda) -->
+  <div id="panel-bearing" class="ui-panel stagger-3 fixed bottom-3 left-3 z-20 px-4 py-3">
+    <div class="font-terminal text-phosphor text-lg leading-tight">
+      <div>RUMBO <span id="bearing-az" class="text-brass-bright">000°</span></div>
+      <div>ELEV&nbsp;&nbsp;<span id="bearing-el" class="text-brass-bright">+00°</span></div>
+    </div>
+  </div>
+
+  <!-- Controles (abajo derecha) -->
+  <div id="panel-controls" class="ui-panel stagger-4 fixed bottom-3 right-3 z-20 px-3 py-2 flex gap-2">
+    <button id="btn-mode" class="brass-btn" title="Alternar sensores / arrastre manual">☸ MODO AR</button>
+    <button id="btn-sound" class="brass-btn" title="Sonido del mar">♪ MAR</button>
+  </div>
+
+  <!-- ═══════════ OVERLAY DE INICIO ═══════════ -->
+  <div id="start-overlay" class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 px-6 text-center">
+    <div class="start-frame max-w-xl w-full px-8 py-10">
+      <div class="font-terminal text-phosphor text-sm tracking-widest opacity-80">CARTA ASTRONÓMICA · SGP4 · TLE NORAD</div>
+      <h1 class="font-display text-brass-bright text-6xl md:text-7xl mt-2 title-glow">El Sextante Digital</h1>
+      <p class="font-fell italic text-parchment text-lg mt-4 leading-relaxed">
+        Alza tu instrumento al firmamento, navegante. La Estación Espacial y el Hubble
+        surcan los cielos a 27&nbsp;000 km/h — apúntales con la mira e intercepta su transmisión.
+      </p>
+      <button id="btn-start" class="brass-btn-big mt-8">⚓ INICIAR TRAVESÍA</button>
+      <p class="font-terminal text-phosphor text-xs mt-5 opacity-70">
+        SE SOLICITARÁ CÁMARA · GIROSCOPIO · POSICIÓN — CONCÉDELOS PARA EL MODO AR
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════ TERMINAL DE INTERCEPTACIÓN ═══════════ -->
+  <div id="terminal-overlay" class="fixed inset-0 z-40 hidden items-center justify-center px-4">
+    <div class="terminal-frame w-full max-w-2xl">
+      <div class="terminal-header flex items-center justify-between px-3 py-1">
+        <span class="font-terminal text-sm">⚡ TRANSMISIÓN INTERCEPTADA — CANAL CIFRADO</span>
+        <button id="btn-terminal-close" class="font-terminal text-sm hover:text-red-400">[CERRAR ✕]</button>
+      </div>
+      <pre id="terminal-body" class="font-terminal text-phosphor text-sm md:text-base px-4 py-3 h-72 overflow-y-auto whitespace-pre-wrap"></pre>
+    </div>
+  </div>
+
+  <div id="noise-overlay" class="fixed inset-0 pointer-events-none z-30"></div>
+
+  <script src="js/starfield.js"></script>
+  <script src="js/sensors.js"></script>
+  <script src="js/orbits.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

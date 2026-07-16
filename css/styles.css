@@ -1,0 +1,226 @@
+/* ═══════════════════════════════════════════════════════════════
+   EL SEXTANTE DIGITAL — instrumento náutico de latón siglo XVIII
+   poseído por un radar militar de fósforo verde.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --abyss: #050a0e;
+  --abyss-panel: rgba(8, 14, 18, 0.82);
+  --brass: #8a6d2f;
+  --brass-bright: #d4a638;
+  --brass-dark: #4a3a18;
+  --phosphor: #39ff14;
+  --phosphor-dim: rgba(57, 255, 20, 0.35);
+  --parchment: #d8c9a3;
+  --signal-red: #ff3b30;
+}
+
+.bg-abyss   { background-color: var(--abyss); }
+.text-phosphor { color: var(--phosphor); }
+.text-brass-bright { color: var(--brass-bright); }
+.text-parchment { color: var(--parchment); }
+
+.font-display  { font-family: 'Pirata One', cursive; }
+.font-fell     { font-family: 'IM Fell English', serif; }
+.font-terminal { font-family: 'VT323', monospace; }
+
+body { font-family: 'IM Fell English', serif; }
+
+/* ── Cámara: tinte océano-nocturno para que el fósforo resalte ── */
+#camera-tint {
+  background:
+    radial-gradient(ellipse at center, rgba(5, 10, 14, 0.15) 0%, rgba(5, 10, 14, 0.65) 100%),
+    linear-gradient(rgba(10, 25, 20, 0.25), rgba(10, 25, 20, 0.25));
+  mix-blend-mode: multiply;
+}
+
+/* ── Viñeta circular del visor ── */
+#vignette {
+  background: radial-gradient(circle at center,
+    transparent 0%,
+    transparent 52%,
+    rgba(5, 10, 14, 0.55) 78%,
+    rgba(3, 6, 8, 0.92) 100%);
+}
+
+/* ── Grano / ruido de pantalla vieja ── */
+#noise-overlay {
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain-shift 0.9s steps(4) infinite;
+}
+@keyframes grain-shift {
+  0%   { transform: translate(0, 0); }
+  25%  { transform: translate(-2%, 1%); }
+  50%  { transform: translate(1%, -2%); }
+  75%  { transform: translate(-1%, 2%); }
+  100% { transform: translate(0, 0); }
+}
+
+/* ── Paneles de instrumentos: latón remachado + sepia ── */
+.ui-panel {
+  background: var(--abyss-panel);
+  border: 1px solid var(--brass);
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 3px rgba(138, 109, 47, 0.18),
+    inset 0 0 24px rgba(0, 0, 0, 0.7),
+    0 0 12px rgba(0, 0, 0, 0.8);
+  position: relative;
+  filter: sepia(0.12);
+  backdrop-filter: blur(2px);
+}
+/* remaches de latón en las esquinas */
+.ui-panel::before, .ui-panel::after {
+  content: '';
+  position: absolute;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, var(--brass-bright), var(--brass-dark));
+  box-shadow: 0 0 3px rgba(0,0,0,0.9);
+}
+.ui-panel::before { top: 4px; left: 4px; }
+.ui-panel::after  { bottom: 4px; right: 4px; }
+
+.panel-title {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  color: var(--brass-bright);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  margin-bottom: 0.25rem;
+  text-shadow: 0 1px 2px #000;
+}
+
+/* ── Botones de latón ── */
+.brass-btn {
+  font-family: 'VT323', monospace;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  color: var(--abyss);
+  background: linear-gradient(180deg, var(--brass-bright) 0%, var(--brass) 55%, var(--brass-dark) 100%);
+  border: 1px solid var(--brass-dark);
+  border-radius: 3px;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  text-shadow: 0 1px 0 rgba(255, 235, 180, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.55), 0 2px 4px rgba(0, 0, 0, 0.7);
+  transition: transform 0.08s ease, filter 0.15s ease;
+}
+.brass-btn:hover  { filter: brightness(1.15); }
+.brass-btn:active { transform: translateY(1px); }
+.brass-btn.btn-off { filter: grayscale(0.7) brightness(0.7); }
+
+.brass-btn-big {
+  font-family: 'Pirata One', cursive;
+  font-size: 1.6rem;
+  letter-spacing: 0.06em;
+  color: #1a1206;
+  background: linear-gradient(180deg, #e8bc4a 0%, var(--brass-bright) 45%, var(--brass) 100%);
+  border: 2px solid var(--brass-dark);
+  border-radius: 6px;
+  padding: 0.55rem 2.2rem;
+  cursor: pointer;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 245, 210, 0.6),
+    0 0 24px rgba(212, 166, 56, 0.35),
+    0 4px 10px rgba(0, 0, 0, 0.8);
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+.brass-btn-big:hover {
+  transform: scale(1.04);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 245, 210, 0.6),
+    0 0 42px rgba(212, 166, 56, 0.6),
+    0 4px 12px rgba(0, 0, 0, 0.8);
+}
+
+/* ── Overlay de inicio ── */
+#start-overlay {
+  background:
+    radial-gradient(ellipse at 50% 120%, rgba(20, 45, 35, 0.55), transparent 60%),
+    radial-gradient(ellipse at center, rgba(5, 10, 14, 0.88) 0%, rgba(3, 6, 8, 0.97) 100%);
+  transition: opacity 0.7s ease;
+}
+#start-overlay.fading { opacity: 0; pointer-events: none; }
+
+.start-frame {
+  border: 1px solid var(--brass);
+  border-radius: 6px;
+  background: rgba(8, 14, 18, 0.6);
+  box-shadow: inset 0 0 0 4px rgba(138, 109, 47, 0.15), inset 0 0 60px rgba(0, 0, 0, 0.8);
+  filter: sepia(0.15);
+}
+
+.title-glow {
+  text-shadow:
+    0 0 18px rgba(212, 166, 56, 0.45),
+    0 2px 2px rgba(0, 0, 0, 0.9);
+  animation: title-breathe 4s ease-in-out infinite;
+}
+@keyframes title-breathe {
+  0%, 100% { text-shadow: 0 0 14px rgba(212, 166, 56, 0.35), 0 2px 2px rgba(0,0,0,0.9); }
+  50%      { text-shadow: 0 0 30px rgba(212, 166, 56, 0.65), 0 2px 2px rgba(0,0,0,0.9); }
+}
+
+/* ── Terminal de fósforo verde ── */
+#terminal-overlay { background: rgba(3, 6, 8, 0.7); }
+#terminal-overlay.open { display: flex; }
+
+.terminal-frame {
+  background: rgba(2, 12, 4, 0.95);
+  border: 1px solid var(--phosphor-dim);
+  border-radius: 4px;
+  box-shadow:
+    0 0 30px rgba(57, 255, 20, 0.25),
+    inset 0 0 60px rgba(0, 40, 0, 0.6);
+  animation: terminal-pop 0.25s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+/* scanline del CRT */
+.terminal-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.18) 0px,
+    rgba(0, 0, 0, 0.18) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+.terminal-header {
+  color: var(--phosphor);
+  border-bottom: 1px solid var(--phosphor-dim);
+  background: rgba(57, 255, 20, 0.07);
+}
+#terminal-body { text-shadow: 0 0 6px rgba(57, 255, 20, 0.55); }
+
+@keyframes terminal-pop {
+  from { transform: scale(0.92); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* ── Aparición escalonada de la UI al zarpar ── */
+.ui-panel, #panel-controls {
+  opacity: 0;
+  transform: translateY(10px);
+}
+body.sailing .ui-panel, body.sailing #panel-controls {
+  animation: panel-reveal 0.6s ease-out forwards;
+}
+body.sailing .stagger-1 { animation-delay: 0.15s; }
+body.sailing .stagger-2 { animation-delay: 0.35s; }
+body.sailing .stagger-3 { animation-delay: 0.55s; }
+body.sailing .stagger-4 { animation-delay: 0.75s; }
+@keyframes panel-reveal {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Utilidades ── */
+.touch-none { touch-action: none; }
+#sky-canvas { cursor: grab; }
+#sky-canvas.dragging { cursor: grabbing; }
