@@ -26,11 +26,11 @@
 
 body { font-family: 'IM Fell English', serif; }
 
-/* ── Cámara: tinte océano-nocturno para que el fósforo resalte ── */
+/* ── Cámara: tinte océano-nocturno para que estrellas y fósforo resalten ── */
 #camera-tint {
   background:
-    radial-gradient(ellipse at center, rgba(5, 10, 14, 0.15) 0%, rgba(5, 10, 14, 0.65) 100%),
-    linear-gradient(rgba(10, 25, 20, 0.25), rgba(10, 25, 20, 0.25));
+    radial-gradient(circle at center, rgba(4, 8, 12, 0.42) 0%, rgba(4, 8, 12, 0.5) 50%, rgba(5, 10, 14, 0.78) 100%),
+    linear-gradient(rgba(10, 25, 20, 0.3), rgba(10, 25, 20, 0.3));
   mix-blend-mode: multiply;
 }
 
@@ -57,49 +57,50 @@ body { font-family: 'IM Fell English', serif; }
   100% { transform: translate(0, 0); }
 }
 
-/* ── Paneles de instrumentos: latón remachado + sepia ── */
+/* ── Paneles de instrumentos: madera de camarote + herrajes de latón ── */
 .ui-panel {
-  background: var(--abyss-panel);
-  border: 1px solid var(--brass);
-  border-radius: 4px;
+  /* vetas de madera oscura + remaches de latón en las 4 esquinas */
+  background:
+    radial-gradient(circle 4px at 7px 7px, #e8c76a 0%, #4a3a18 55%, transparent 60%),
+    radial-gradient(circle 4px at calc(100% - 7px) 7px, #e8c76a 0%, #4a3a18 55%, transparent 60%),
+    radial-gradient(circle 4px at 7px calc(100% - 7px), #e8c76a 0%, #4a3a18 55%, transparent 60%),
+    radial-gradient(circle 4px at calc(100% - 7px) calc(100% - 7px), #e8c76a 0%, #4a3a18 55%, transparent 60%),
+    repeating-linear-gradient(93deg,
+      rgba(62, 40, 20, 0.55) 0px, rgba(42, 27, 13, 0.55) 7px,
+      rgba(54, 34, 16, 0.55) 13px, rgba(38, 24, 11, 0.55) 21px),
+    linear-gradient(160deg, rgba(46, 30, 16, 0.92), rgba(24, 15, 8, 0.94));
+  border: 2px solid var(--brass);
+  outline: 1px solid rgba(30, 19, 9, 0.9);
+  border-radius: 5px;
   box-shadow:
-    inset 0 0 0 3px rgba(138, 109, 47, 0.18),
-    inset 0 0 24px rgba(0, 0, 0, 0.7),
-    0 0 12px rgba(0, 0, 0, 0.8);
+    inset 0 0 0 3px rgba(20, 12, 5, 0.8),
+    inset 0 0 0 4px rgba(212, 166, 56, 0.25),
+    inset 0 0 28px rgba(0, 0, 0, 0.75),
+    0 3px 14px rgba(0, 0, 0, 0.85);
   position: relative;
-  filter: sepia(0.12);
   backdrop-filter: blur(2px);
 }
-/* remaches de latón en las esquinas */
-.ui-panel::before, .ui-panel::after {
-  content: '';
-  position: absolute;
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, var(--brass-bright), var(--brass-dark));
-  box-shadow: 0 0 3px rgba(0,0,0,0.9);
-}
-.ui-panel::before { top: 4px; left: 4px; }
-.ui-panel::after  { bottom: 4px; right: 4px; }
 
 .panel-title {
-  font-family: 'IM Fell English', serif;
-  font-style: italic;
-  color: var(--brass-bright);
-  font-size: 0.72rem;
-  letter-spacing: 0.18em;
-  margin-bottom: 0.25rem;
-  text-shadow: 0 1px 2px #000;
+  font-family: 'Pirata One', cursive;
+  color: var(--parchment);
+  font-size: 0.95rem;
+  letter-spacing: 0.14em;
+  margin-bottom: 0.3rem;
+  text-shadow: 0 0 8px rgba(212, 166, 56, 0.35), 0 2px 2px #000;
 }
 
-/* ── Botones de latón ── */
+/* ── Botones: placa de latón sobre madera ── */
 .brass-btn {
   font-family: 'VT323', monospace;
   font-size: 0.95rem;
   letter-spacing: 0.08em;
-  color: var(--abyss);
-  background: linear-gradient(180deg, var(--brass-bright) 0%, var(--brass) 55%, var(--brass-dark) 100%);
+  color: #1a1206;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 240, 200, 0.07) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, var(--brass-bright) 0%, var(--brass) 55%, var(--brass-dark) 100%);
   border: 1px solid var(--brass-dark);
+  outline: 2px solid rgba(38, 24, 11, 0.9);
   border-radius: 3px;
   padding: 0.3rem 0.7rem;
   cursor: pointer;
@@ -145,11 +146,22 @@ body { font-family: 'IM Fell English', serif; }
 #start-overlay.fading { opacity: 0; pointer-events: none; }
 
 .start-frame {
-  border: 1px solid var(--brass);
+  /* pergamino de mapa antiguo con bordes quemados */
+  border: 2px solid var(--brass);
+  outline: 1px solid rgba(30, 19, 9, 0.9);
   border-radius: 6px;
-  background: rgba(8, 14, 18, 0.6);
-  box-shadow: inset 0 0 0 4px rgba(138, 109, 47, 0.15), inset 0 0 60px rgba(0, 0, 0, 0.8);
-  filter: sepia(0.15);
+  background:
+    radial-gradient(circle 5px at 10px 10px, #e8c76a 0%, #4a3a18 55%, transparent 62%),
+    radial-gradient(circle 5px at calc(100% - 10px) 10px, #e8c76a 0%, #4a3a18 55%, transparent 62%),
+    radial-gradient(circle 5px at 10px calc(100% - 10px), #e8c76a 0%, #4a3a18 55%, transparent 62%),
+    radial-gradient(circle 5px at calc(100% - 10px) calc(100% - 10px), #e8c76a 0%, #4a3a18 55%, transparent 62%),
+    radial-gradient(ellipse at center, rgba(64, 46, 24, 0.55) 0%, rgba(34, 22, 11, 0.85) 75%, rgba(16, 10, 5, 0.95) 100%),
+    linear-gradient(rgba(10, 14, 16, 0.9), rgba(10, 14, 16, 0.9));
+  box-shadow:
+    inset 0 0 0 4px rgba(20, 12, 5, 0.85),
+    inset 0 0 0 5px rgba(212, 166, 56, 0.3),
+    inset 0 0 90px rgba(10, 5, 2, 0.95),
+    0 0 40px rgba(0, 0, 0, 0.9);
 }
 
 .title-glow {
@@ -169,10 +181,14 @@ body { font-family: 'IM Fell English', serif; }
 
 .terminal-frame {
   background: rgba(2, 12, 4, 0.95);
-  border: 1px solid var(--phosphor-dim);
+  /* CRT de fósforo enmarcado en madera y latón del camarote */
+  border: 3px solid var(--brass);
+  outline: 4px solid rgba(38, 24, 11, 0.95);
   border-radius: 4px;
   box-shadow:
+    inset 0 0 0 1px var(--phosphor-dim),
     0 0 30px rgba(57, 255, 20, 0.25),
+    0 0 0 6px rgba(20, 12, 5, 0.6),
     inset 0 0 60px rgba(0, 40, 0, 0.6);
   animation: terminal-pop 0.25s ease-out;
   position: relative;

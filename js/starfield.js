@@ -50,13 +50,15 @@ function initStarfield() {
 
   // 150 estrellas repartidas por la bóveda celeste
   for (let i = 0; i < 150; i++) {
+    const size = 1.2 + Math.random() * 2.4;
     App.stars.push({
       az: Math.random() * 360,
       el: Math.random() * 100 - 10,          // algunas bajo el horizonte
-      size: 0.6 + Math.random() * 1.8,
+      size,
+      spike: size > 3.0,                     // las mayores llevan destello de 4 puntas
       phase: Math.random() * Math.PI * 2,    // fase de parpadeo
       speed: 0.5 + Math.random() * 1.5,
-      warm: Math.random() < 0.18,            // algunas estrellas doradas
+      warm: Math.random() < 0.3,             // estrellas doradas que armonizan con el latón
     });
   }
 
@@ -88,6 +90,7 @@ function renderLoop(t) {
   ctx.arc(App.cx, App.cy, App.visorRadius, 0, Math.PI * 2);
   ctx.clip();
 
+  drawWindRose(ctx);
   drawRadarSweep(ctx, dt);
   drawStars(ctx, t / 1000);
   drawHorizonRing(ctx);
@@ -100,6 +103,55 @@ function renderLoop(t) {
 
   updateBearingReadout();
   requestAnimationFrame(renderLoop);
+}
+
+/* ── Rosa de los vientos de 8 puntas, tenue, gira con la brújula ── */
+function drawWindRose(ctx) {
+  const R = App.visorRadius * 0.52;
+  const cx = App.cx, cy = App.cy;
+  const base = -App.state.rotacionBrujula * DEG;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(base);
+
+  for (let i = 0; i < 8; i++) {
+    const major = i % 2 === 0;
+    const a = i * 45 * DEG - Math.PI / 2;
+    const len = major ? R : R * 0.6;
+    const half = major ? R * 0.08 : R * 0.055;
+    const px = Math.cos(a), py = Math.sin(a);
+    const ox = -py, oy = px; // perpendicular
+
+    // mitad clara
+    ctx.fillStyle = major ? 'rgba(212, 166, 56, 0.14)' : 'rgba(212, 166, 56, 0.09)';
+    ctx.beginPath();
+    ctx.moveTo(px * len, py * len);
+    ctx.lineTo(ox * half, oy * half);
+    ctx.lineTo(0, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // mitad sombreada
+    ctx.fillStyle = major ? 'rgba(138, 109, 47, 0.1)' : 'rgba(138, 109, 47, 0.06)';
+    ctx.beginPath();
+    ctx.moveTo(px * len, py * len);
+    ctx.lineTo(-ox * half, -oy * half);
+    ctx.lineTo(0, 0);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // círculos concéntricos del medallón central
+  ctx.strokeStyle = 'rgba(212, 166, 56, 0.16)';
+  ctx.lineWidth = 1;
+  for (const rr of [R * 0.18, R * 0.09]) {
+    ctx.beginPath();
+    ctx.arc(0, 0, rr, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
 }
 
 /* ── Barrido de radar rotatorio ── */
@@ -127,19 +179,37 @@ function drawStars(ctx, time) {
     const p = projectAzEl(s.az, s.el);
     if (p.r > App.visorRadius * 1.05 || p.r < 0) continue;
 
-    const twinkle = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(time * s.speed * 2 + s.phase));
+    // parpadean, pero nunca desaparecen (piso de 0.65)
+    const twinkle = 0.65 + 0.35 * (0.5 + 0.5 * Math.sin(time * s.speed * 2 + s.phase));
+    const color = s.warm ? '#f2d98a' : '#e6f4ec';
+
     ctx.globalAlpha = twinkle;
-    ctx.fillStyle = s.warm ? '#e8cf8a' : '#cfe8dd';
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = s.size * 4;
     ctx.beginPath();
     ctx.arc(p.x, p.y, s.size, 0, Math.PI * 2);
     ctx.fill();
+    ctx.shadowBlur = 0;
 
     // halo suave en las más brillantes
-    if (s.size > 1.8) {
-      ctx.globalAlpha = twinkle * 0.25;
+    if (s.size > 2.2) {
+      ctx.globalAlpha = twinkle * 0.3;
       ctx.beginPath();
       ctx.arc(p.x, p.y, s.size * 3, 0, Math.PI * 2);
       ctx.fill();
+    }
+
+    // cruz de difracción en las mayores
+    if (s.spike) {
+      const len = s.size * 5 * twinkle;
+      ctx.globalAlpha = twinkle * 0.8;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(p.x - len, p.y); ctx.lineTo(p.x + len, p.y);
+      ctx.moveTo(p.x, p.y - len); ctx.lineTo(p.x, p.y + len);
+      ctx.stroke();
     }
   }
   ctx.globalAlpha = 1;
@@ -163,11 +233,17 @@ function drawCompassRing(ctx) {
   const R = App.visorRadius;
   const theta = App.state.rotacionBrujula;
 
-  // aro exterior de latón
-  ctx.strokeStyle = 'rgba(138, 109, 47, 0.9)';
-  ctx.lineWidth = 3;
+  // aro exterior doble de latón (tapa de brújula náutica)
+  ctx.strokeStyle = 'rgba(138, 109, 47, 0.95)';
+  ctx.lineWidth = 5;
   ctx.beginPath();
-  ctx.arc(App.cx, App.cy, R + 6, 0, Math.PI * 2);
+  ctx.arc(App.cx, App.cy, R + 9, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(212, 166, 56, 0.75)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(App.cx, App.cy, R + 4, 0, Math.PI * 2);
   ctx.stroke();
 
   ctx.strokeStyle = 'rgba(212, 166, 56, 0.55)';
@@ -175,6 +251,20 @@ function drawCompassRing(ctx) {
   ctx.beginPath();
   ctx.arc(App.cx, App.cy, R - 2, 0, Math.PI * 2);
   ctx.stroke();
+
+  // remaches del aro exterior cada 45° (fijos, no giran)
+  for (let deg = 22.5; deg < 360; deg += 45) {
+    const a = deg * DEG;
+    const rx = App.cx + (R + 9) * Math.cos(a);
+    const ry = App.cy + (R + 9) * Math.sin(a);
+    const g = ctx.createRadialGradient(rx - 1, ry - 1, 0.5, rx, ry, 3.5);
+    g.addColorStop(0, '#e8c76a');
+    g.addColorStop(1, '#4a3a18');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(rx, ry, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   // marcas cada 5°, mayores cada 15°, cardinales cada 90°
   const cardinals = { 0: 'N', 90: 'E', 180: 'S', 270: 'O' };
@@ -191,9 +281,25 @@ function drawCompassRing(ctx) {
     ctx.stroke();
 
     if (deg in cardinals) {
-      const tr = R - 30;
       const isNorth = deg === 0;
-      ctx.font = `${isNorth ? 26 : 20}px 'Pirata One', cursive`;
+
+      // rombo náutico apuntando al centro
+      const tipR = R - 16;
+      const baseR = R - 44;
+      const halfW = 6;
+      const px = Math.cos(a), py = Math.sin(a);
+      const ox = -py, oy = px;
+      ctx.fillStyle = isNorth ? 'rgba(255, 91, 77, 0.85)' : 'rgba(212, 166, 56, 0.7)';
+      ctx.beginPath();
+      ctx.moveTo(App.cx + tipR * px, App.cy + tipR * py);
+      ctx.lineTo(App.cx + ((tipR + baseR) / 2) * px + halfW * ox, App.cy + ((tipR + baseR) / 2) * py + halfW * oy);
+      ctx.lineTo(App.cx + baseR * px, App.cy + baseR * py);
+      ctx.lineTo(App.cx + ((tipR + baseR) / 2) * px - halfW * ox, App.cy + ((tipR + baseR) / 2) * py - halfW * oy);
+      ctx.closePath();
+      ctx.fill();
+
+      const tr = R - 58;
+      ctx.font = `${isNorth ? 28 : 22}px 'Pirata One', cursive`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = isNorth ? '#ff5b4d' : '#d4a638';
@@ -215,8 +321,8 @@ function drawCompassRing(ctx) {
   ctx.fillStyle = '#ff5b4d';
   ctx.beginPath();
   ctx.moveTo(App.cx, App.cy - R + 4);
-  ctx.lineTo(App.cx - 7, App.cy - R - 12);
-  ctx.lineTo(App.cx + 7, App.cy - R - 12);
+  ctx.lineTo(App.cx - 7, App.cy - R - 14);
+  ctx.lineTo(App.cx + 7, App.cy - R - 14);
   ctx.closePath();
   ctx.fill();
 }
