@@ -31,6 +31,7 @@ function initOrbits() {
   for (const sat of SATELLITES) {
     sat.satrec = satellite.twoline2satrec(sat.tle1, sat.tle2);
     sat.az = 0; sat.el = -90; sat.altKm = 0; sat.rangeKm = 0;
+    sat.latDeg = 0; sat.lonDeg = 0;   // punto subsatélite (posición sobre la Tierra)
     sat.visible = false;
     sat.trail = [];
   }
@@ -60,7 +61,14 @@ function lookAnglesAt(sat, date) {
     el: satellite.radiansToDegrees(look.elevation),
     rangeKm: look.rangeSat,
     altKm: geo.height,
+    latDeg: satellite.radiansToDegrees(geo.latitude),
+    lonDeg: normalizeLon(satellite.radiansToDegrees(geo.longitude)),
   };
+}
+
+/* Normaliza la longitud geodésica al rango [-180, 180] */
+function normalizeLon(lon) {
+  return ((lon + 180) % 360 + 360) % 360 - 180;
 }
 
 /* ── Propagación en cada frame (reloj del sistema) ── */
@@ -73,6 +81,8 @@ function updateSatellites() {
     sat.el = la.el;
     sat.altKm = la.altKm;
     sat.rangeKm = la.rangeKm;
+    sat.latDeg = la.latDeg;
+    sat.lonDeg = la.lonDeg;
     sat.visible = la.el > 0;
   }
 }

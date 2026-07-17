@@ -1,14 +1,20 @@
 /* ═══════════════════════════════════════════════════════════════
    sensors.js — Cámara trasera, giroscopio (DeviceOrientation),
    geolocalización y fallback manual de arrastre.
+
+   Los navegadores modernos (Safari/iOS en particular) bloquean la
+   API de DeviceOrientation hasta que un gesto explícito del usuario
+   solicita el permiso. Por eso el firmamento se movía "estático":
+   nunca llegaba a activarse el listener. El botón "Calibrar Sextante"
+   es ahora el disparador obligatorio de ese permiso.
    ═══════════════════════════════════════════════════════════════ */
 
 'use strict';
 
 const Sensors = {
-  orientationAvailable: false,
-  orientationGranted: false,
-  listening: false,
+  orientationAvailable: false,   // ha llegado al menos un evento real
+  orientationGranted: false,     // el usuario concedió el permiso
+  listening: false,              // el listener está enganchado
 };
 
 /* ── Cámara trasera proyectada al fondo ── */
@@ -61,51 +67,111 @@ function updateObserverReadout() {
   document.getElementById('obs-lon').textContent = fmt(lon, 'E', 'O');
 }
 
-/* ── Giroscopio / brújula (con filtro paso-bajo contra el jitter) ── */
-const GYRO_SMOOTH = 0.18;   // 0..1: menor = más suave
+/* ═══════════ GIROSCOPIO / BRÚJULA ═══════════ */
 
-function handleOrientation(e) {
+/* ── Manejador del evento deviceorientation ──
+   Mapeo de ejes:
+     · event.alpha  → rotación de la brújula (eje Z, 0..360) → rotacionBrujula
+     · event.beta   → inclinación (eje X)                    → elevacionVista
+   Escribimos sobre los OBJETIVOS del estado; el bucle de render
+   interpola suavemente hacia ellos (ver aplicarSuavizado en starfield.js),
+   de modo que el pulso tembloroso del pirata no produce saltos bruscos.  */
+function manejarMovimiento(event) {
   if (!App.state.modeAR) return;
-  if (e.alpha === null || e.alpha === undefined) return;
+  if (event.alpha === null || event.alpha === undefined) return;
 
   Sensors.orientationAvailable = true;
 
-  // iOS expone la brújula real; en el resto, alpha crece en sentido antihorario
-  const heading = (typeof e.webkitCompassHeading === 'number')
-    ? e.webkitCompassHeading
-    : 360 - e.alpha;
+  // Rumbo (azimut sobre el eje Z). iOS expone la brújula real ya calibrada
+  // al norte magnético; el resto de navegadores dan alpha antihorario.
+  const heading = (typeof event.webkitCompassHeading === 'number')
+    ? event.webkitCompassHeading
+    : 360 - event.alpha;
+  App.state.targetRotacion = ((heading % 360) + 360) % 360;
 
-  // suavizado exponencial por el camino angular más corto
-  const cur = App.state.rotacionBrujula;
-  const dAz = ((heading - cur + 540) % 360) - 180;
-  App.state.rotacionBrujula = ((cur + dAz * GYRO_SMOOTH) % 360 + 360) % 360;
-
-  // beta ≈ 90° con el móvil vertical apuntando al horizonte
-  if (typeof e.beta === 'number') {
-    const pitch = Math.max(-80, Math.min(80, e.beta - 90));
-    App.state.pitchOffset += (pitch - App.state.pitchOffset) * GYRO_SMOOTH;
+  // Elevación de la vista a partir de la inclinación (beta).
+  // beta ≈ 90° con el móvil vertical mirando al horizonte;
+  // al inclinarlo hacia atrás para mirar al cielo, beta crece.
+  if (typeof event.beta === 'number') {
+    const elevacionVista = Math.max(-80, Math.min(80, event.beta - 90));
+    App.state.targetElevacion = elevacionVista;
   }
+
+  // El firmamento se redibuja en cada frame del bucle continuo,
+  // pero forzamos un dibujado inmediato para máxima reactividad.
+  if (typeof dibujarFirmamento === 'function') dibujarFirmamento();
 }
 
-async function requestOrientationPermission() {
-  // iOS 13+ exige permiso explícito tras un gesto del usuario
-  if (typeof DeviceOrientationEvent !== 'undefined' &&
-      typeof DeviceOrientationEvent.requestPermission === 'function') {
+/* ── Enganchar el listener una sola vez ── */
+function activarListenerOrientacion() {
+  if (Sensors.listening) return;
+  window.addEventListener('deviceorientation', manejarMovimiento, true);
+  // Algunos Android exponen la brújula absoluta por un canal distinto.
+  window.addEventListener('deviceorientationabsolute', manejarMovimiento, true);
+  Sensors.listening = true;
+}
+
+/* ── Solicitud de permisos dinámica (iOS / Android / escritorio) ──
+   Debe invocarse SIEMPRE desde un gesto del usuario (clic en el botón). */
+async function solicitarPermisosSensores() {
+  const soportado = typeof DeviceOrientationEvent !== 'undefined';
+  if (!soportado) {
+    marcarSensoresDenegados('SIN SENSORES · TIMÓN MANUAL');
+    return false;
+  }
+
+  // Safari / iOS 13+: hay que pedir permiso explícito.
+  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     try {
       const res = await DeviceOrientationEvent.requestPermission();
-      Sensors.orientationGranted = res === 'granted';
+      Sensors.orientationGranted = (res === 'granted');
     } catch (_) {
       Sensors.orientationGranted = false;
     }
   } else {
-    Sensors.orientationGranted = true; // Android / escritorio: sin permiso previo
+    // Android / escritorio: no requieren permiso previo.
+    Sensors.orientationGranted = true;
   }
 
-  if (Sensors.orientationGranted && !Sensors.listening) {
-    window.addEventListener('deviceorientation', handleOrientation, true);
-    Sensors.listening = true;
+  if (Sensors.orientationGranted) {
+    activarListenerOrientacion();
+    setMode(true);
+    marcarSensoresActivos();
+    // Verificamos que realmente lleguen eventos; si no, volvemos a manual.
+    setTimeout(() => {
+      if (!Sensors.orientationAvailable) {
+        setMode(false);
+        marcarSensoresDenegados('SENSOR MUDO · TIMÓN MANUAL');
+      }
+    }, 1500);
+    return true;
   }
-  return Sensors.orientationGranted;
+
+  // Denegado: el timón manual sigue disponible como respaldo.
+  setMode(false);
+  marcarSensoresDenegados('PERMISO DENEGADO · TIMÓN MANUAL');
+  return false;
+}
+
+/* ── Estados visuales del botón de calibración ── */
+function marcarSensoresActivos() {
+  const btn = document.getElementById('btn-calibrate');
+  const label = document.getElementById('btn-calibrate-label');
+  if (!btn) return;
+  btn.classList.remove('sensors-denied');
+  btn.classList.add('sensors-ok');
+  if (label) label.textContent = 'SENSORES ACTIVOS';
+  // Se desvanece suavemente pasado un instante.
+  setTimeout(() => btn.classList.add('hidden-fade'), 1200);
+}
+
+function marcarSensoresDenegados(texto) {
+  const btn = document.getElementById('btn-calibrate');
+  const label = document.getElementById('btn-calibrate-label');
+  if (!btn) return;
+  btn.classList.remove('sensors-ok', 'hidden-fade');
+  btn.classList.add('sensors-denied');
+  if (label) label.textContent = texto || 'TIMÓN MANUAL';
 }
 
 /* ── Alternar Modo AR / Manual ── */
@@ -124,7 +190,8 @@ function setMode(ar) {
   }
 }
 
-/* ── Fallback: arrastre con ratón o dedo, con inercia ── */
+/* ── Fallback: arrastre con ratón (PC) o dedo (móvil) como timón ──
+   Escribe sobre los objetivos para compartir el mismo suavizado. */
 function initDragFallback() {
   const canvas = document.getElementById('sky-canvas');
   let dragging = false;
@@ -142,8 +209,8 @@ function initDragFallback() {
     if (!dragging || App.state.modeAR) return;
     const dAz = -(x - lastX) * 0.35;
     const dPitch = (y - lastY) * 0.22;
-    App.state.rotacionBrujula = ((App.state.rotacionBrujula + dAz) % 360 + 360) % 360;
-    App.state.pitchOffset = Math.max(-80, Math.min(80, App.state.pitchOffset + dPitch));
+    App.state.targetRotacion = ((App.state.targetRotacion + dAz) % 360 + 360) % 360;
+    App.state.targetElevacion = Math.max(-80, Math.min(80, App.state.targetElevacion + dPitch));
     velAz = dAz; velPitch = dPitch;
     lastX = x; lastY = y;
   };
@@ -159,8 +226,8 @@ function initDragFallback() {
     if (App.state.autoPan) { velAz = 0; velPitch = 0; return; }
     if (dragging || App.state.modeAR) return;
     if (Math.abs(velAz) < 0.01 && Math.abs(velPitch) < 0.01) return;
-    App.state.rotacionBrujula = ((App.state.rotacionBrujula + velAz) % 360 + 360) % 360;
-    App.state.pitchOffset = Math.max(-80, Math.min(80, App.state.pitchOffset + velPitch));
+    App.state.targetRotacion = ((App.state.targetRotacion + velAz) % 360 + 360) % 360;
+    App.state.targetElevacion = Math.max(-80, Math.min(80, App.state.targetElevacion + velPitch));
     velAz *= 0.92;
     velPitch *= 0.92;
   };
@@ -171,31 +238,30 @@ async function setSail() {
   const overlay = document.getElementById('start-overlay');
   overlay.classList.add('fading');
   setTimeout(() => overlay.remove(), 800);
-  document.body.classList.add('sailing');
+  document.body.classList.add('sailing');   // revela el botón "Calibrar Sextante"
 
   initCamera();
   initGeolocation();
 
-  const granted = await requestOrientationPermission();
-  // Arrancamos en AR si hay sensores; el fallback manual siempre queda disponible
-  setMode(granted && ('DeviceOrientationEvent' in window));
-
-  // Si tras 2s no llegó ningún evento de orientación, caemos a manual
-  setTimeout(() => {
-    if (App.state.modeAR && !Sensors.orientationAvailable) setMode(false);
-  }, 2000);
+  // Arrancamos en MANUAL: el firmamento ya responde al arrastre.
+  // El modo AR se activa cuando el navegante pulsa "Calibrar Sextante".
+  setMode(false);
 
   if (typeof startOcean === 'function') startOcean();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   initDragFallback();
+
   document.getElementById('btn-start').addEventListener('click', setSail);
+
+  // Botón dedicado: único disparador fiable del permiso de sensores.
+  document.getElementById('btn-calibrate').addEventListener('click', solicitarPermisosSensores);
+
+  // El botón de la barra alterna AR/manual; al pedir AR reutiliza el flujo de permisos.
   document.getElementById('btn-mode').addEventListener('click', async () => {
     if (!App.state.modeAR) {
-      const ok = await requestOrientationPermission();
-      setMode(ok);
-      if (!ok) setMode(false);
+      await solicitarPermisosSensores();
     } else {
       setMode(false);
     }

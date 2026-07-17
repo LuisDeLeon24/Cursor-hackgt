@@ -28,6 +28,13 @@
   <!-- Viñeta del visor -->
   <div id="vignette" class="fixed inset-0 pointer-events-none"></div>
 
+  <!-- ═══════════ BOTÓN DE CALIBRACIÓN DE SENSORES ═══════════ -->
+  <button id="btn-calibrate" class="calibrate-btn fixed z-30"
+          title="Otorga permiso al giroscopio y la brújula para el modo AR">
+    <span class="cal-icon">⚓</span>
+    <span id="btn-calibrate-label">CALIBRAR SEXTANTE</span>
+  </button>
+
   <!-- ═══════════ PANELES DE INSTRUMENTOS ═══════════ -->
 
   <!-- Estado del navío (arriba izquierda) -->
@@ -74,6 +81,18 @@
     <div id="star-lore" class="font-fell italic text-parchment text-xs mt-1 opacity-80">—</div>
   </div>
 
+  <!-- Carta orbital: mapamundi 2D con la posición de la ISS (colapsable, esquina) -->
+  <div id="panel-map" class="ui-panel stagger-3 fixed left-3 z-20 px-3 py-2">
+    <div class="map-head flex items-center justify-between gap-3" title="Plegar / desplegar la carta">
+      <h2 class="panel-title m-0">≋ CARTA ORBITAL ≋</h2>
+      <button id="map-toggle" class="map-toggle" title="Plegar / desplegar la carta">▾</button>
+    </div>
+    <div class="map-body">
+      <canvas id="map-canvas" width="252" height="126"></canvas>
+      <div id="map-readout" class="font-terminal map-readout">ISS  --.-°  --.-°</div>
+    </div>
+  </div>
+
   <!-- ═══════════ OVERLAY DE INICIO ═══════════ -->
   <div id="start-overlay" class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 px-6 text-center">
     <div class="start-frame max-w-xl w-full px-8 py-10">
@@ -106,6 +125,7 @@
   <script src="js/starfield.js"></script>
   <script src="js/sensors.js"></script>
   <script src="js/orbits.js"></script>
+  <script src="js/worldmap.js"></script>
   <script src="js/game.js"></script>
 </body>
 </html>

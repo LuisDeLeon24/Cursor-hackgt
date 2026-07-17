@@ -16,14 +16,19 @@ const App = {
   visorRadius: 0,
 
   state: {
-    rotacionBrujula: 0,   // azimut de la vista (grados, 0 = Norte)
-    pitchOffset: 0,       // desplazamiento de elevación de la vista (grados)
+    rotacionBrujula: 0,   // azimut de la vista SUAVIZADO (grados, 0 = Norte)
+    pitchOffset: 0,       // elevación de la vista SUAVIZADA (grados)
+    targetRotacion: 0,    // azimut objetivo que fijan sensores / arrastre
+    targetElevacion: 0,   // elevación objetivo que fijan sensores / arrastre
     modeAR: false,        // true = sensores, false = arrastre manual
     observer: { lat: 0, lon: 0, altKm: 0, fixed: false },
     sweepAngle: 0,        // barrido de radar
     selectedStar: null,   // astro fijado por el navegante
     autoPan: false,       // giro automático hacia el astro (solo modo manual)
   },
+
+  // Suavizado del movimiento (0 = inmóvil, 1 = sin suavizar / salto directo)
+  smooth: 0.16,
 
   stars: [],
   // Ganchos que llenan los otros módulos
@@ -209,11 +214,38 @@ function resizeCanvas() {
   App.visorRadius = Math.min(App.cx, App.cy) - 30;
 }
 
+/* ── Suavizado del movimiento (interpolación lineal hacia el objetivo) ──
+   Tanto los sensores como el arrastre manual escriben en targetRotacion /
+   targetElevacion; aquí acercamos suavemente los valores mostrados para que
+   el cielo no salte aunque el pulso del pirata tiemble. El factor se corrige
+   por el tiempo de frame para ser independiente de los FPS. */
+function aplicarSuavizado(dt) {
+  const s = App.state;
+  const k = 1 - Math.pow(1 - App.smooth, Math.max(dt, 0) * 60);
+
+  // Azimut: interpolamos por el camino angular más corto (evita giro de 359°→0°).
+  const diff = ((s.targetRotacion - s.rotacionBrujula + 540) % 360) - 180;
+  s.rotacionBrujula = ((s.rotacionBrujula + diff * k) % 360 + 360) % 360;
+
+  // Elevación: interpolación lineal simple.
+  s.pitchOffset += (s.targetElevacion - s.pitchOffset) * k;
+}
+
+/* ── Redibujado inmediato del firmamento ──
+   El bucle de requestAnimationFrame ya pinta de forma continua, pero al llegar
+   un evento de sensor damos un empujón instantáneo hacia el objetivo para
+   máxima reactividad en tiempo real. */
+function dibujarFirmamento() {
+  aplicarSuavizado(0.016);
+}
+
 /* ── Bucle principal ── */
 let lastTime = 0;
 function renderLoop(t) {
   const dt = Math.min((t - lastTime) / 1000, 0.1);
   lastTime = t;
+
+  aplicarSuavizado(dt);
 
   const ctx = App.ctx;
   ctx.clearRect(0, 0, App.canvas.width, App.canvas.height);
