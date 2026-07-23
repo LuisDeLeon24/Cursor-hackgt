@@ -1,6 +1,6 @@
-# El Sextante Digital (SextantAR)
+# El Telescopio Digital (TelescopioAR)
 
-Sextante de Realidad Aumentada para navegantes modernos. Alinea un firmamento
+Telescopio de Realidad Aumentada para navegantes modernos. Alinea un firmamento
 virtual sobre la cámara en vivo de tu dispositivo, rastrea la ISS y el Hubble en
 tiempo real con el algoritmo **SGP4** (`satellite.js`) sobre datos TLE reales, y
 desbloquea un radiomensaje pirata si logras mantener un satélite en la mira.

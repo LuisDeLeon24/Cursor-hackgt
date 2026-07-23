@@ -5,7 +5,7 @@
    Los navegadores modernos (Safari/iOS en particular) bloquean la
    API de DeviceOrientation hasta que un gesto explícito del usuario
    solicita el permiso. Por eso el firmamento se movía "estático":
-   nunca llegaba a activarse el listener. El botón "Calibrar Sextante"
+   nunca llegaba a activarse el listener. El botón "Calibrar Telescopio"
    es ahora el disparador obligatorio de ese permiso.
    ═══════════════════════════════════════════════════════════════ */
 
@@ -50,7 +50,10 @@ function initGeolocation() {
       if (typeof onObserverFixed === 'function') onObserverFixed();
     },
     () => {
-      // Fallback: coordenadas por defecto (0, 0)
+      // Fallback: Ciudad de México (cielo local del hackathon)
+      App.state.observer.lat = 19.4326;
+      App.state.observer.lon = -99.1332;
+      App.state.observer.altKm = 2.24;
       App.state.observer.fixed = true;
       updateObserverReadout();
       if (typeof onObserverFixed === 'function') onObserverFixed();
@@ -238,13 +241,13 @@ async function setSail() {
   const overlay = document.getElementById('start-overlay');
   overlay.classList.add('fading');
   setTimeout(() => overlay.remove(), 800);
-  document.body.classList.add('sailing');   // revela el botón "Calibrar Sextante"
+  document.body.classList.add('sailing');   // revela el botón "Calibrar Telescopio"
 
   initCamera();
   initGeolocation();
 
   // Arrancamos en MANUAL: el firmamento ya responde al arrastre.
-  // El modo AR se activa cuando el navegante pulsa "Calibrar Sextante".
+  // El modo AR se activa cuando el navegante pulsa "Calibrar Telescopio".
   setMode(false);
 
   if (typeof startOcean === 'function') startOcean();

@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
    starfield.js — Estado global, proyección Az/El → canvas,
-   visor del sextante, brújula perimetral y 150 estrellas.
+   visor del telescopio, brújula perimetral y 150 estrellas.
    ═══════════════════════════════════════════════════════════════ */
 
 'use strict';
@@ -21,11 +21,17 @@ const App = {
     targetRotacion: 0,    // azimut objetivo que fijan sensores / arrastre
     targetElevacion: 0,   // elevación objetivo que fijan sensores / arrastre
     modeAR: false,        // true = sensores, false = arrastre manual
-    observer: { lat: 0, lon: 0, altKm: 0, fixed: false },
+    // Por defecto CDMX hasta que llegue la geolocalización (cielo real del hackathon)
+    observer: { lat: 19.4326, lon: -99.1332, altKm: 2.24, fixed: false },
     sweepAngle: 0,        // barrido de radar
-    selectedStar: null,   // astro fijado por el navegante
+    selectedStar: null,   // astro fijado por el navegante / centro del visor
     autoPan: false,       // giro automático hacia el astro (solo modo manual)
+    starFocusHold: 0,     // segundos restantes tras cerrar ficha a mano
   },
+
+  // Radio (px) para enfocar el astro en el centro del sextante
+  STAR_FOCUS_ENTER: 72,
+  STAR_FOCUS_KEEP: 110,
 
   // Suavizado del movimiento (0 = inmóvil, 1 = sin suavizar / salto directo)
   smooth: 0.16,
@@ -167,7 +173,7 @@ function initStarfield() {
 
   // Estrellas reales del catálogo (Az/El se calculan cada frame)
   App.stars = STAR_CATALOG.map(([name, constellation, raH, decDeg, mag, distLy, spectral], i) => ({
-    name, constellation, mag, distLy,
+    name, constellation, mag, distLy, spectral,
     ra: raH * 15 * DEG,                     // horas → radianes
     dec: decDeg * DEG,
     color: SPECTRAL_COLOR[spectral] || '#e6f4ec',
@@ -254,6 +260,7 @@ function renderLoop(t) {
   if (App.hooks.update) App.hooks.update(dt);
   if (App.hooks.updateView) App.hooks.updateView(dt);   // inercia del arrastre
   updateAutoPan(dt);
+  updateCenterStarFocus(dt);
 
   // Todo lo celeste queda recortado al círculo del visor
   ctx.save();
@@ -264,6 +271,7 @@ function renderLoop(t) {
   drawWindRose(ctx);
   drawRadarSweep(ctx, dt);
   drawStars(ctx, t / 1000);
+  drawStarLabels(ctx);
   drawStarSelection(ctx, t / 1000);
   drawHorizonRing(ctx);
   if (App.hooks.drawSatellites) App.hooks.drawSatellites(ctx, t / 1000);
@@ -273,6 +281,7 @@ function renderLoop(t) {
   drawCompassRing(ctx);
   drawGuideArrow(ctx);
   if (App.hooks.drawGame) App.hooks.drawGame(ctx, dt);
+  drawFocusReadout(ctx);
 
   updateBearingReadout();
   requestAnimationFrame(renderLoop);
@@ -335,10 +344,10 @@ function drawRadarSweep(ctx, dt) {
     ? ctx.createConicGradient(a, App.cx, App.cy)
     : null;
   if (grad) {
-    grad.addColorStop(0, 'rgba(57, 255, 20, 0.16)');
-    grad.addColorStop(0.08, 'rgba(57, 255, 20, 0.045)');
-    grad.addColorStop(0.2, 'rgba(57, 255, 20, 0)');
-    grad.addColorStop(1, 'rgba(57, 255, 20, 0)');
+    grad.addColorStop(0, 'rgba(42, 61, 143, 0.14)');
+    grad.addColorStop(0.08, 'rgba(42, 61, 143, 0.04)');
+    grad.addColorStop(0.2, 'rgba(42, 61, 143, 0)');
+    grad.addColorStop(1, 'rgba(42, 61, 143, 0)');
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(App.cx, App.cy, App.visorRadius, 0, Math.PI * 2);
@@ -388,7 +397,73 @@ function drawStars(ctx, time) {
   ctx.globalAlpha = 1;
 }
 
-/* ── Astro seleccionado: anillo de latón pulsante + nombre ── */
+/* ── Etiquetas con el nombre real de cada estrella del catálogo en vista ── */
+function drawStarLabels(ctx) {
+  const compact = App.canvas.width < 700;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+
+  for (const s of App.stars) {
+    if (s.el < 1) continue;
+    if (s === App.state.selectedStar) continue;
+    // En móvil solo nombramos las más brillantes para no saturar
+    if (compact && s.mag > 1.35) continue;
+    const p = projectAzEl(s.az, s.el);
+    if (p.r > App.visorRadius * 0.95 || p.r < 6) continue;
+
+    const bright = s.mag <= 1.5;
+    ctx.font = `${compact ? (bright ? 10 : 9) : (bright ? 13 : 11)}px 'IBM Plex Mono', 'Courier New', monospace`;
+    ctx.fillStyle = bright ? 'rgba(245, 236, 210, 0.95)' : 'rgba(245, 236, 210, 0.72)';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 4;
+    ctx.fillText(s.name, p.x + s.size + 7, p.y);
+    ctx.shadowBlur = 0;
+  }
+}
+
+/* ── Lectura junto a la mira: qué estrella real estás enfocando ── */
+function drawFocusReadout(ctx) {
+  const s = App.state.selectedStar;
+  if (!s || !document.body.classList.contains('sailing')) return;
+  if (starScreenDist(s) > App.STAR_FOCUS_KEEP) return;
+
+  const compact = App.canvas.width < 700;
+  const cx = App.cx;
+  const y = App.cy + (compact ? 52 : 78);
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.shadowColor = 'rgba(0,0,0,0.85)';
+  ctx.shadowBlur = 6;
+
+  if (!compact) {
+    ctx.font = "12px 'IBM Plex Mono', 'Courier New', monospace";
+    ctx.fillStyle = 'rgba(240, 226, 196, 0.85)';
+    ctx.fillText('ESTRELLA EN LA MIRA', cx, y);
+  }
+
+  ctx.font = compact
+    ? "700 15px 'Source Serif 4', Georgia, serif"
+    : "700 22px 'Source Serif 4', Georgia, serif";
+  ctx.fillStyle = '#f0e2c4';
+  ctx.fillText(s.name, cx, compact ? y : y + 18);
+
+  ctx.font = compact
+    ? "11px 'Source Serif 4', Georgia, serif"
+    : "13px 'Source Serif 4', Georgia, serif";
+  ctx.fillStyle = 'rgba(240, 226, 196, 0.9)';
+  ctx.fillText(
+    s.constellation + '  ·  mag ' + s.mag.toFixed(2),
+    cx,
+    compact ? y + 18 : y + 44
+  );
+
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+/* ── Astro seleccionado: anillo índigo pulsante + nombre ── */
 function drawStarSelection(ctx, time) {
   const s = App.state.selectedStar;
   if (!s || s.el < -12) return;
@@ -396,16 +471,16 @@ function drawStarSelection(ctx, time) {
   if (p.r > App.visorRadius * 1.1) return;
 
   const pulse = 0.5 + 0.5 * Math.sin(time * 4);
-  ctx.strokeStyle = '#d4a638';
+  ctx.strokeStyle = '#c9a227';
   ctx.lineWidth = 1.6;
-  ctx.shadowColor = '#d4a638';
+  ctx.shadowColor = 'rgba(201, 162, 39, 0.55)';
   ctx.shadowBlur = 8;
   ctx.globalAlpha = 0.6 + 0.4 * pulse;
   ctx.beginPath();
   ctx.arc(p.x, p.y, 12 + pulse * 4, 0, Math.PI * 2);
   ctx.stroke();
 
-  // cuatro muescas de sextante alrededor del anillo
+  // cuatro muescas de telescopio alrededor del anillo
   for (let k = 0; k < 4; k++) {
     const a = k * Math.PI / 2 + Math.PI / 4;
     const r1 = 16 + pulse * 4, r2 = r1 + 6;
@@ -417,10 +492,10 @@ function drawStarSelection(ctx, time) {
   ctx.shadowBlur = 0;
   ctx.globalAlpha = 1;
 
-  ctx.font = "20px 'Pirata One', cursive";
+  ctx.font = "600 16px 'Source Serif 4', Georgia, serif";
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
-  ctx.fillStyle = '#d4a638';
+  ctx.fillStyle = '#f0e2c4';
   ctx.shadowColor = 'rgba(0,0,0,0.9)';
   ctx.shadowBlur = 4;
   ctx.fillText(s.name, p.x, p.y - 22);
@@ -457,9 +532,9 @@ function drawGuideArrow(ctx) {
   ctx.shadowBlur = 0;
   ctx.restore();
 
-  ctx.font = "15px 'VT323', monospace";
+  ctx.font = "12px 'IBM Plex Mono', 'Courier New', monospace";
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#d4a638';
+  ctx.fillStyle = '#c9a227';
   const lx = App.cx + (edge - 26) * Math.cos(a);
   const ly = App.cy + (edge - 26) * Math.sin(a);
   ctx.fillText(s.name.toUpperCase(), lx, ly);
@@ -469,6 +544,56 @@ function drawGuideArrow(ctx) {
 
 function visibleStarsByBrightness() {
   return App.stars.filter((s) => s.el > 2).sort((a, b) => a.mag - b.mag);
+}
+
+function starScreenDist(star) {
+  const p = projectAzEl(star.az, star.el);
+  return Math.hypot(p.x - App.cx, p.y - App.cy);
+}
+
+/* Enfoca la estrella más cercana (y brillante) al centro del sextante. */
+function updateCenterStarFocus(dt) {
+  if (!document.body.classList.contains('sailing')) return;
+
+  if (App.state.starFocusHold > 0) {
+    App.state.starFocusHold = Math.max(0, App.state.starFocusHold - dt);
+    return;
+  }
+  // Mientras el pan manual lleva un astro al centro, no pelear con él
+  if (App.state.autoPan) return;
+
+  let best = null;
+  let bestScore = Infinity;
+
+  for (const s of App.stars) {
+    if (s.el < 1) continue;
+    const p = projectAzEl(s.az, s.el);
+    if (p.r > App.visorRadius * 1.02 || p.r < 0) continue;
+    const d = Math.hypot(p.x - App.cx, p.y - App.cy);
+    const keep = App.state.selectedStar === s ? App.STAR_FOCUS_KEEP : App.STAR_FOCUS_ENTER;
+    if (d > keep) continue;
+    // Distancia + magnitud: gana la más cercana al centro; a igual distancia, la más brillante
+    const score = d + Math.max(0, s.mag) * 4;
+    if (score < bestScore) {
+      bestScore = score;
+      best = s;
+    }
+  }
+
+  if (best) {
+    if (best !== App.state.selectedStar) {
+      App.state.selectedStar = best;
+      App.state.autoPan = false;
+      updateStarCard();
+    }
+  } else if (App.state.selectedStar) {
+    // Solo soltar si el seleccionado se alejó del centro (no por ir bajo el horizonte al panear)
+    const cur = App.state.selectedStar;
+    if (cur.el < 0 || starScreenDist(cur) > App.STAR_FOCUS_KEEP) {
+      App.state.selectedStar = null;
+      updateStarCard();
+    }
+  }
 }
 
 function selectStarByStep(step) {
@@ -483,6 +608,7 @@ function selectStarByStep(step) {
 
 function selectStar(star) {
   App.state.selectedStar = star;
+  App.state.starFocusHold = 0;
   App.state.autoPan = !App.state.modeAR;   // en AR el usuario gira el cuerpo; lo guía la flecha
   updateStarCard();
 }
@@ -490,23 +616,25 @@ function selectStar(star) {
 function deselectStar() {
   App.state.selectedStar = null;
   App.state.autoPan = false;
+  App.state.starFocusHold = 2.5;         // pausa breve antes de reenfocar el centro
   updateStarCard();
 }
 
-/* Auto-pan: gira la vista (modo manual) hasta centrar el astro */
+/* Auto-pan: gira la vista (modo manual) hasta centrar el astro.
+   Escribe en los OBJETIVOS para que el suavizado no pelee con el pan. */
 function updateAutoPan(dt) {
   if (!App.state.autoPan || !App.state.selectedStar || App.state.modeAR) return;
   const s = App.state.selectedStar;
 
-  // camino angular más corto en azimut
-  let dAz = ((s.az - App.state.rotacionBrujula + 540) % 360) - 180;
-  // elevar la vista hasta que el astro quede a ~40% del radio del centro
-  const targetPitch = Math.max(-80, Math.min(80, 55 - s.el));
-  const dPitch = targetPitch - App.state.pitchOffset;
+  // camino angular más corto en azimut (hacia el objetivo mostrado)
+  const dAz = ((s.az - App.state.targetRotacion + 540) % 360) - 180;
+  // elevar la vista hasta que el astro quede en el centro (adjEl ≈ 90°)
+  const targetPitch = Math.max(-80, Math.min(80, 90 - s.el));
+  const dPitch = targetPitch - App.state.targetElevacion;
 
   const k = Math.min(1, dt * 4);           // easing exponencial
-  App.state.rotacionBrujula = ((App.state.rotacionBrujula + dAz * k) % 360 + 360) % 360;
-  App.state.pitchOffset += dPitch * k;
+  App.state.targetRotacion = ((App.state.targetRotacion + dAz * k) % 360 + 360) % 360;
+  App.state.targetElevacion += dPitch * k;
 
   if (Math.abs(dAz) < 0.4 && Math.abs(dPitch) < 0.4) App.state.autoPan = false;
 }
@@ -519,8 +647,9 @@ function updateStarCard() {
   if (!s) { card.classList.add('hidden'); return; }
   card.classList.remove('hidden');
   document.getElementById('star-name').textContent = s.name;
-  document.getElementById('star-constellation').textContent = 'Constelación: ' + s.constellation;
-  document.getElementById('star-lore').textContent = '"' + s.lore + '"';
+  document.getElementById('star-constellation').textContent =
+    'Constelación ' + s.constellation + (s.spectral ? ' · tipo ' + s.spectral : '');
+  document.getElementById('star-lore').textContent = s.lore;
 }
 
 /* Datos vivos de la tarjeta (az/el cambian con el cielo) */
@@ -529,10 +658,10 @@ setInterval(() => {
   const el = document.getElementById('star-data');
   if (!s || !el) return;
   el.textContent =
-    `MAG ${s.mag.toFixed(2)} · DIST ${s.distLy < 100 ? s.distLy.toFixed(1) : Math.round(s.distLy)} AÑOS LUZ · ` +
-    `AZ ${String(Math.round(s.az)).padStart(3, '0')}° · EL ${s.el >= 0 ? '+' : '−'}${Math.abs(Math.round(s.el))}°` +
-    (s.el <= 2 ? ' · BAJO EL HORIZONTE' : '');
-}, 500);
+    `mag ${s.mag.toFixed(2)} · ${s.distLy < 100 ? s.distLy.toFixed(1) : Math.round(s.distLy)} años luz · ` +
+    `az ${String(Math.round(s.az)).padStart(3, '0')}° · el ${s.el >= 0 ? '+' : '−'}${Math.abs(Math.round(s.el))}°` +
+    (s.el <= 2 ? ' · bajo el horizonte' : '');
+}, 250);
 
 /* ── Anillo del horizonte (Elevación 0°) ── */
 function drawHorizonRing(ctx) {
@@ -618,20 +747,20 @@ function drawCompassRing(ctx) {
       ctx.fill();
 
       const tr = R - 58;
-      ctx.font = `${isNorth ? 28 : 22}px 'Pirata One', cursive`;
+      ctx.font = `600 ${isNorth ? 20 : 16}px 'Source Serif 4', Georgia, serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = isNorth ? '#ff5b4d' : '#d4a638';
+      ctx.fillStyle = isNorth ? '#ff5b4d' : '#c9a227';
       ctx.shadowColor = 'rgba(0,0,0,0.9)';
       ctx.shadowBlur = 4;
       ctx.fillText(cardinals[deg], App.cx + tr * Math.cos(a), App.cy + tr * Math.sin(a));
       ctx.shadowBlur = 0;
     } else if (deg % 45 === 0) {
       const tr = R - 26;
-      ctx.font = "13px 'VT323', monospace";
+      ctx.font = "11px 'IBM Plex Mono', 'Courier New', monospace";
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = 'rgba(216, 201, 163, 0.75)';
+      ctx.fillStyle = 'rgba(240, 226, 196, 0.8)';
       ctx.fillText(String(deg).padStart(3, '0'), App.cx + tr * Math.cos(a), App.cy + tr * Math.sin(a));
     }
   }

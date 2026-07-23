@@ -65,7 +65,7 @@ function drawGame(ctx, dt) {
 
   const cx = App.cx, cy = App.cy;
   const locking = Game.progress > 0;
-  const col = locking ? '#39ff14' : 'rgba(212, 166, 56, 0.9)';
+  const col = locking ? '#2a3d8f' : 'rgba(201, 162, 39, 0.92)';
 
   // cruz de la mira
   ctx.strokeStyle = col;
@@ -87,18 +87,18 @@ function drawGame(ctx, dt) {
 
   if (locking) {
     // anillo de progreso alrededor de la mira
-    ctx.strokeStyle = '#39ff14';
+    ctx.strokeStyle = '#2a3d8f';
     ctx.lineWidth = 4;
-    ctx.shadowColor = '#39ff14';
-    ctx.shadowBlur = 10;
+    ctx.shadowColor = 'rgba(42, 61, 143, 0.55)';
+    ctx.shadowBlur = 8;
     ctx.beginPath();
     ctx.arc(cx, cy, 34, -Math.PI / 2, -Math.PI / 2 + Game.progress * Math.PI * 2);
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    ctx.font = "17px 'VT323', monospace";
+    ctx.font = "14px 'IBM Plex Mono', 'Courier New', monospace";
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#39ff14';
+    ctx.fillStyle = '#1a2a5c';
     ctx.fillText(
       `SINCRONIZANDO SEÑAL ${Math.round(Game.progress * 100)}%`,
       cx, cy + 58

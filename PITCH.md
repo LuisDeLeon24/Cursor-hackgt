@@ -1,4 +1,4 @@
-# PITCH — El Sextante Digital (SextantAR)
+# PITCH — El Telescopio Digital (TelescopioAR)
 
 Guion de 90 segundos para los jueces, con la coreografía de demo y el plan B.
 Cada beat está diseñado con un principio de psicología de persuasión (entre corchetes).
@@ -19,7 +19,7 @@ Cada beat está diseñado con un principio de psicología de persuasión (entre 
 
 ### Beat 2 — Problema y autoridad (0:10–0:25) [Interés + Authority Bias]
 
-> "Este es El Sextante Digital: un sextante de realidad aumentada. Usa el giroscopio
+> "Este es El Telescopio Digital: un telescopio de realidad aumentada. Usa el giroscopio
 > y la cámara de este teléfono para alinear un firmamento virtual con el cielo real,
 > y calcula — en este preciso segundo — la órbita de la Estación Espacial Internacional
 > con **SGP4**, el mismo algoritmo de propagación orbital que usa **NORAD**, sobre
@@ -30,7 +30,7 @@ Cada beat está diseñado con un principio de psicología de persuasión (entre 
 *(Gira lentamente el cuerpo buscando el satélite; los jueces ven la brújula girar.)*
 
 > "La ISS está pasando sobre nosotros AHORA, a 27 000 kilómetros por hora y
-> 420 kilómetros de altura. El sextante me dice exactamente dónde: azimut, elevación,
+> 420 kilómetros de altura. El telescopio me dice exactamente dónde: azimut, elevación,
 > y su estela de los últimos 15 minutos."
 
 *(Centra el satélite en la mira. Arranca la sincronización de 5 segundos.
@@ -45,8 +45,8 @@ Cada beat está diseñado con un principio de psicología de persuasión (entre 
 *(Lee el mensaje descifrado en voz alta, con teatralidad.)*
 
 > "«Botín detectado. La tripulación de la Zarya esconde 400 toneladas de oro estelar.»
-> Hace 300 años, un sextante te decía dónde estabas.
-> Hoy, El Sextante Digital te dice qué pasa sobre tu cabeza — y lo convierte en un juego.
+> Hace 300 años, un telescopio te decía dónde mirar.
+> Hoy, El Telescopio Digital te dice qué pasa sobre tu cabeza — y lo convierte en un juego.
 > Gracias, capitanes."
 
 *(Termina SIEMPRE con el mensaje pirata en pantalla, nunca en un panel técnico.)*
@@ -83,7 +83,7 @@ Cada beat está diseñado con un principio de psicología de persuasión (entre 
 - **Falla la red del venue**: la app es 100% estática y ya está cargada; solo la
   primera carga necesita red (CDNs). Mantener la pestaña abierta desde antes.
 - **Falla el giroscopio o los permisos**: botón ✋ MANUAL → se arrastra con el dedo.
-  La frase de transición: *"y para los navegantes de escritorio, el sextante también
+  La frase de transición: *"y para los navegantes de escritorio, el telescopio también
   se gobierna a mano"* — suena a feature, no a fallback.
 - **Falla el móvil completo**: demo en laptop en modo manual con la webcam de fondo.
   Ensayar esta ruta al menos una vez completa.

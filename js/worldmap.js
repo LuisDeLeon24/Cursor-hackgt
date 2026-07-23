@@ -122,6 +122,12 @@
       if (e.target.id !== 'map-toggle') togglePanel();
     });
 
+    // En teléfono arranca plegada para no tapar el visor
+    if (window.matchMedia('(max-width: 700px)').matches) {
+      panel.classList.add('collapsed');
+      if (toggle) toggle.textContent = '▸';
+    }
+
     computeTrack();
     requestAnimationFrame(loop);
   }
@@ -153,15 +159,15 @@
 
   function drawOcean() {
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#08171b');
-    g.addColorStop(0.5, '#0a2029');
-    g.addColorStop(1, '#08171b');
+    g.addColorStop(0, '#d9e0d0');
+    g.addColorStop(0.5, '#c5d0c8');
+    g.addColorStop(1, '#d4cbb0');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
   }
 
   function drawGraticule() {
-    ctx.strokeStyle = 'rgba(212, 166, 56, 0.16)';
+    ctx.strokeStyle = 'rgba(26, 42, 92, 0.18)';
     ctx.lineWidth = 0.5;
     ctx.beginPath();
     for (let lon = -180; lon <= 180; lon += 30) {
@@ -175,7 +181,7 @@
     ctx.stroke();
 
     // ecuador remarcado
-    ctx.strokeStyle = 'rgba(212, 166, 56, 0.32)';
+    ctx.strokeStyle = 'rgba(74, 58, 24, 0.4)';
     ctx.lineWidth = 0.8;
     ctx.beginPath();
     ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2);
@@ -192,9 +198,9 @@
         else ctx.lineTo(p.x, p.y);
       }
       ctx.closePath();
-      ctx.fillStyle = 'rgba(90, 74, 34, 0.55)';
+      ctx.fillStyle = 'rgba(90, 60, 30, 0.42)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(212, 166, 56, 0.65)';
+      ctx.strokeStyle = 'rgba(28, 16, 8, 0.55)';
       ctx.lineWidth = 0.8;
       ctx.stroke();
     }
@@ -214,7 +220,7 @@
     ctx.beginPath();
     ctx.rect(0, 0, W, H);
     ctx.clip();
-    ctx.fillStyle = 'rgba(3, 8, 12, 0.42)';
+    ctx.fillStyle = 'rgba(40, 28, 14, 0.28)';
     ctx.beginPath();
     let started = false;
     for (let lon = -180; lon <= 180; lon += 2) {
@@ -298,8 +304,8 @@
     // diamante de latón
     ctx.save();
     ctx.translate(p.x, p.y);
-    ctx.fillStyle = '#d4a638';
-    ctx.strokeStyle = '#050a0e';
+    ctx.fillStyle = '#c9a227';
+    ctx.strokeStyle = '#1c1008';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, -4); ctx.lineTo(4, 0); ctx.lineTo(0, 4); ctx.lineTo(-4, 0);
@@ -307,11 +313,11 @@
     ctx.fill(); ctx.stroke();
     ctx.restore();
 
-    ctx.font = "10px 'VT323', monospace";
+    ctx.font = "10px 'IBM Plex Mono', 'Courier New', monospace";
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillStyle = '#d8c9a3';
-    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.fillStyle = '#1a2a5c';
+    ctx.shadowColor = 'rgba(240, 226, 196, 0.85)';
     ctx.shadowBlur = 2;
     ctx.fillText('NAVÍO', p.x, p.y + 4);
     ctx.shadowBlur = 0;
@@ -320,7 +326,7 @@
   /* ── Traza de tierra de la ISS (línea punteada, con corte en ±180) ── */
   function drawTrack() {
     if (track.length < 2) return;
-    ctx.strokeStyle = 'rgba(57, 255, 20, 0.55)';
+    ctx.strokeStyle = 'rgba(42, 61, 143, 0.55)';
     ctx.lineWidth = 1;
     ctx.setLineDash([2, 3]);
     ctx.beginPath();
@@ -387,11 +393,11 @@
       ctx.globalAlpha = 1;
 
       // etiqueta
-      ctx.font = "11px 'VT323', monospace";
+      ctx.font = "11px 'IBM Plex Mono', 'Courier New', monospace";
       ctx.textAlign = 'left';
       ctx.textBaseline = 'bottom';
       ctx.fillStyle = sat.color;
-      ctx.shadowColor = 'rgba(0,0,0,0.9)';
+      ctx.shadowColor = 'rgba(240, 226, 196, 0.9)';
       ctx.shadowBlur = 2;
       let lx = p.x + 5;
       if (lx > W - 34) { ctx.textAlign = 'right'; lx = p.x - 5; }
