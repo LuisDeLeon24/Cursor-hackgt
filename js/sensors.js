@@ -152,7 +152,7 @@ async function solicitarPermisosSensores() {
 
   // Denegado: el timón manual sigue disponible como respaldo.
   setMode(false);
-  marcarSensoresDenegados('PERMISO DENEGADO · TIMÓN MANUAL');
+  marcarSensoresDenegados('Permiso denegado. Modo manual.');
   return false;
 }
 
@@ -163,7 +163,7 @@ function marcarSensoresActivos() {
   if (!btn) return;
   btn.classList.remove('sensors-denied');
   btn.classList.add('sensors-ok');
-  if (label) label.textContent = 'SENSORES ACTIVOS';
+  if (label) label.textContent = 'Sensores activos';
   // Se desvanece suavemente pasado un instante.
   setTimeout(() => btn.classList.add('hidden-fade'), 1200);
 }
@@ -174,7 +174,7 @@ function marcarSensoresDenegados(texto) {
   if (!btn) return;
   btn.classList.remove('sensors-ok', 'hidden-fade');
   btn.classList.add('sensors-denied');
-  if (label) label.textContent = texto || 'TIMÓN MANUAL';
+  if (label) label.textContent = texto || 'Modo manual';
 }
 
 /* ── Alternar Modo AR / Manual ── */
@@ -183,13 +183,15 @@ function setMode(ar) {
   const btn = document.getElementById('btn-mode');
   const label = document.getElementById('mode-label');
   if (ar) {
-    btn.textContent = '☸ MODO AR';
+    btn.textContent = 'AR';
     btn.classList.remove('btn-off');
-    label.textContent = 'AR·GIRO';
+    btn.setAttribute('aria-pressed', 'true');
+    label.textContent = 'AR';
   } else {
-    btn.textContent = '✋ MANUAL';
+    btn.textContent = 'Manual';
     btn.classList.add('btn-off');
-    label.textContent = 'MANUAL';
+    btn.setAttribute('aria-pressed', 'false');
+    label.textContent = 'Manual';
   }
 }
 

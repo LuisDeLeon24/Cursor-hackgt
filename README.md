@@ -34,7 +34,7 @@ En iOS, el permiso del giroscopio se solicita al tocar "INICIAR TRAVESÍA"
 | Archivo | Qué hace |
 |---|---|
 | `index.html` | Layout, video de cámara, canvas, paneles, overlay de inicio y terminal |
-| `css/styles.css` | Tema latón/fósforo, grano, scanlines, animaciones de revelado |
+| `css/styles.css` | Cromado claro, un acento y una sola familia tipográfica |
 | `js/starfield.js` | Estado global, proyección Az/El → canvas, visor, brújula, 150 estrellas |
 | `js/sensors.js` | Cámara trasera, `deviceorientation`, geolocalización, fallback de arrastre |
 | `js/orbits.js` | TLEs de ISS/Hubble, propagación SGP4 por frame, estelas de 15 min |
