@@ -125,7 +125,10 @@
     // En teléfono arranca plegada para no tapar el visor
     if (window.matchMedia('(max-width: 700px)').matches) {
       panel.classList.add('collapsed');
-      if (toggle) toggle.textContent = '▸';
+      if (toggle) {
+        toggle.textContent = 'Mostrar';
+        toggle.setAttribute('aria-expanded', 'false');
+      }
     }
 
     computeTrack();
@@ -135,7 +138,11 @@
   function togglePanel() {
     panel.classList.toggle('collapsed');
     const toggle = document.getElementById('map-toggle');
-    if (toggle) toggle.textContent = panel.classList.contains('collapsed') ? '▸' : '▾';
+    if (toggle) {
+      const collapsed = panel.classList.contains('collapsed');
+      toggle.textContent = collapsed ? 'Mostrar' : 'Ocultar';
+      toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    }
   }
 
   /* ── Bucle de dibujo ── */
@@ -158,16 +165,12 @@
   }
 
   function drawOcean() {
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#d9e0d0');
-    g.addColorStop(0.5, '#c5d0c8');
-    g.addColorStop(1, '#d4cbb0');
-    ctx.fillStyle = g;
+    ctx.fillStyle = '#F3F3F3';
     ctx.fillRect(0, 0, W, H);
   }
 
   function drawGraticule() {
-    ctx.strokeStyle = 'rgba(26, 42, 92, 0.18)';
+    ctx.strokeStyle = '#E4E4E4';
     ctx.lineWidth = 0.5;
     ctx.beginPath();
     for (let lon = -180; lon <= 180; lon += 30) {
@@ -181,7 +184,7 @@
     ctx.stroke();
 
     // ecuador remarcado
-    ctx.strokeStyle = 'rgba(74, 58, 24, 0.4)';
+    ctx.strokeStyle = '#909090';
     ctx.lineWidth = 0.8;
     ctx.beginPath();
     ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2);
@@ -198,9 +201,9 @@
         else ctx.lineTo(p.x, p.y);
       }
       ctx.closePath();
-      ctx.fillStyle = 'rgba(90, 60, 30, 0.42)';
+      ctx.fillStyle = '#A0A0A0';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(28, 16, 8, 0.55)';
+      ctx.strokeStyle = '#909090';
       ctx.lineWidth = 0.8;
       ctx.stroke();
     }
@@ -220,7 +223,8 @@
     ctx.beginPath();
     ctx.rect(0, 0, W, H);
     ctx.clip();
-    ctx.fillStyle = 'rgba(40, 28, 14, 0.28)';
+    ctx.fillStyle = '#161616';
+    ctx.globalAlpha = 0.08;
     ctx.beginPath();
     let started = false;
     for (let lon = -180; lon <= 180; lon += 2) {
@@ -233,6 +237,7 @@
     else { ctx.lineTo(W, H); ctx.lineTo(0, H); }
     ctx.closePath();
     ctx.fill();
+    ctx.globalAlpha = 1;
     ctx.restore();
   }
 
@@ -304,8 +309,8 @@
     // diamante de latón
     ctx.save();
     ctx.translate(p.x, p.y);
-    ctx.fillStyle = '#c9a227';
-    ctx.strokeStyle = '#1c1008';
+    ctx.fillStyle = '#161616';
+    ctx.strokeStyle = '#FFFFFF';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, -4); ctx.lineTo(4, 0); ctx.lineTo(0, 4); ctx.lineTo(-4, 0);
@@ -313,20 +318,17 @@
     ctx.fill(); ctx.stroke();
     ctx.restore();
 
-    ctx.font = "10px 'IBM Plex Mono', 'Courier New', monospace";
+    ctx.font = "500 11px 'Public Sans', system-ui, sans-serif";
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillStyle = '#1a2a5c';
-    ctx.shadowColor = 'rgba(240, 226, 196, 0.85)';
-    ctx.shadowBlur = 2;
-    ctx.fillText('NAVÍO', p.x, p.y + 4);
-    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#161616';
+    ctx.fillText('Navío', p.x, p.y + 6);
   }
 
   /* ── Traza de tierra de la ISS (línea punteada, con corte en ±180) ── */
   function drawTrack() {
     if (track.length < 2) return;
-    ctx.strokeStyle = 'rgba(42, 61, 143, 0.55)';
+    ctx.strokeStyle = '#459AC2';
     ctx.lineWidth = 1;
     ctx.setLineDash([2, 3]);
     ctx.beginPath();
@@ -370,39 +372,18 @@
         }
       }
 
-      const blink = 0.5 + 0.5 * Math.sin(time * 6);
-      const pulse = (time % 1.5) / 1.5;
-
-      // anillo de pulso expansivo
-      ctx.strokeStyle = sat.color;
-      ctx.globalAlpha = (1 - pulse) * 0.7;
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 2 + pulse * (isISS ? 11 : 7), 0, Math.PI * 2);
-      ctx.stroke();
-
-      // punto central intermitente
-      ctx.globalAlpha = 0.55 + 0.45 * blink;
       ctx.fillStyle = sat.color;
-      ctx.shadowColor = sat.color;
-      ctx.shadowBlur = 8;
       ctx.beginPath();
       ctx.arc(p.x, p.y, isISS ? 3.2 : 2.4, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = 1;
 
-      // etiqueta
-      ctx.font = "11px 'IBM Plex Mono', 'Courier New', monospace";
+      ctx.font = "600 11px 'Public Sans', system-ui, sans-serif";
       ctx.textAlign = 'left';
       ctx.textBaseline = 'bottom';
       ctx.fillStyle = sat.color;
-      ctx.shadowColor = 'rgba(240, 226, 196, 0.9)';
-      ctx.shadowBlur = 2;
       let lx = p.x + 5;
       if (lx > W - 34) { ctx.textAlign = 'right'; lx = p.x - 5; }
       ctx.fillText(sat.name, lx, p.y - 3);
-      ctx.shadowBlur = 0;
     }
   }
 
@@ -415,8 +396,8 @@
     const sat = issSat();
     if (!sat || sat.lonDeg === undefined) return;
     const coords = `ISS  ${fmt(sat.latDeg, 'N', 'S')}  ${fmt(sat.lonDeg, 'E', 'O')}`;
-    const alt = sat.altKm ? ` · ${Math.round(sat.altKm)}km` : '';
-    readout.textContent = coords + alt + (sat.visible ? ' ▲' : '');
+    const alt = sat.altKm ? `  ${Math.round(sat.altKm)} km` : '';
+    readout.textContent = coords + alt + (sat.visible ? ' visible' : '');
     readout.classList.toggle('visible-now', !!sat.visible);
   }
 

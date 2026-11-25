@@ -11,14 +11,16 @@ const SATELLITES = [
     label: 'ISS (ZARYA)',
     tle1: '1 25544U 98067A   26197.51864197  .00014389  00000-0  25368-3 0  9993',
     tle2: '2 25544  51.6421  74.3215 0001241 123.4111 281.3322 15.49817452528143',
-    color: '#2a3d8f',
+    color: '#459AC2',
+    sky: '#58A2C6',
   },
   {
     name: 'HUBBLE',
     label: 'HUBBLE SPACE TELESCOPE',
     tle1: '1 20580U 90037B   26197.12345678  .00001234  00000-0  10000-3 0  9991',
     tle2: '2 20580  28.4682 112.3411 0002341 210.1111 149.8888 14.99213452991234',
-    color: '#6b4a1e',
+    color: '#6C6C6C',
+    sky: '#EBEBEB',
   },
 ];
 
@@ -115,43 +117,30 @@ function drawSatellites(ctx, time) {
     const p = projectAzEl(sat.az, sat.el);
     if (p.r > App.visorRadius * 1.1) continue;
 
-    // punto de tinta intermitente con anillo de pulso
-    const blink = 0.55 + 0.45 * Math.sin(time * 6);
-    const pulse = (time % 1.6) / 1.6;
-
-    ctx.strokeStyle = sat.color;
-    ctx.globalAlpha = (1 - pulse) * 0.6;
+    const ink = sat.sky || sat.color;
+    ctx.strokeStyle = ink;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 6 + pulse * 16, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
     ctx.stroke();
 
-    ctx.globalAlpha = blink;
-    ctx.fillStyle = sat.color;
-    ctx.shadowColor = sat.color;
-    ctx.shadowBlur = 12;
+    ctx.fillStyle = ink;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.globalAlpha = 1;
 
-    // etiqueta de terminal antigua
-    ctx.font = "13px 'IBM Plex Mono', 'Courier New', monospace";
+    ctx.font = "13px 'Public Sans', system-ui, sans-serif";
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = sat.color;
-    ctx.shadowColor = 'rgba(0,0,0,0.9)';
-    ctx.shadowBlur = 3;
-    ctx.fillText(`${sat.name} [ALT: ${Math.round(sat.altKm)}km]`, p.x + 12, p.y - 10);
-    ctx.fillText(`AZ ${Math.round(sat.az)}° · EL ${Math.round(sat.el)}°`, p.x + 12, p.y + 6);
-    ctx.shadowBlur = 0;
+    ctx.fillStyle = ink;
+    ctx.fillText(`${sat.name}  ${Math.round(sat.altKm)} km`, p.x + 12, p.y - 8);
+    ctx.fillText(`Az ${Math.round(sat.az)}°   El ${Math.round(sat.el)}°`, p.x + 12, p.y + 8);
   }
 }
 
 function drawTrail(ctx, sat) {
   if (!sat.trail.length) return;
-  ctx.strokeStyle = sat.color;
+  ctx.strokeStyle = sat.sky || sat.color;
   ctx.lineWidth = 1;
 
   let started = false;
@@ -177,9 +166,9 @@ function updateSatPanel() {
   if (!list) return;
   list.innerHTML = SATELLITES.map((sat) => {
     const status = sat.visible
-      ? `<span style="color:${sat.color}">▲ VISIBLE</span>`
-      : '<span class="opacity-50">▼ BAJO HORIZONTE</span>';
-    return `<div>${sat.name} · ALT ${Math.round(sat.altKm)}km · ${status}</div>`;
+      ? '<span class="is-visible">Visible</span>'
+      : '<span class="is-down">Bajo el horizonte</span>';
+    return `<p class="sat-row"><span class="sat-name" data-sat="${sat.name}">${sat.name}</span><span class="sat-alt">${Math.round(sat.altKm)} km</span>${status}</p>`;
   }).join('');
 }
 

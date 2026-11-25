@@ -65,7 +65,7 @@ function drawGame(ctx, dt) {
 
   const cx = App.cx, cy = App.cy;
   const locking = Game.progress > 0;
-  const col = locking ? '#2a3d8f' : 'rgba(201, 162, 39, 0.92)';
+  const col = locking ? '#58A2C6' : '#EBEBEB';
 
   // cruz de la mira
   ctx.strokeStyle = col;
@@ -87,20 +87,17 @@ function drawGame(ctx, dt) {
 
   if (locking) {
     // anillo de progreso alrededor de la mira
-    ctx.strokeStyle = '#2a3d8f';
-    ctx.lineWidth = 4;
-    ctx.shadowColor = 'rgba(42, 61, 143, 0.55)';
-    ctx.shadowBlur = 8;
+    ctx.strokeStyle = '#58A2C6';
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.arc(cx, cy, 34, -Math.PI / 2, -Math.PI / 2 + Game.progress * Math.PI * 2);
     ctx.stroke();
-    ctx.shadowBlur = 0;
 
-    ctx.font = "14px 'IBM Plex Mono', 'Courier New', monospace";
+    ctx.font = "600 14px 'Public Sans', system-ui, sans-serif";
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#1a2a5c';
+    ctx.fillStyle = '#EBEBEB';
     ctx.fillText(
-      `SINCRONIZANDO SEÑAL ${Math.round(Game.progress * 100)}%`,
+      `Sincronizando señal ${Math.round(Game.progress * 100)}%`,
       cx, cy + 58
     );
   }
@@ -229,6 +226,7 @@ function updateSoundButton(mutedNow) {
   const btn = document.getElementById('btn-sound');
   const muted = mutedNow ?? (Ocean.gain && Ocean.gain.gain.value < 0.001);
   btn.classList.toggle('btn-off', !!muted);
+  btn.setAttribute('aria-pressed', muted ? 'false' : 'true');
 }
 
 /* Bips de sonar durante la sincronización */

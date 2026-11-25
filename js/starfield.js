@@ -41,6 +41,15 @@ const App = {
   hooks: { drawSatellites: null, drawGame: null, update: null, updateView: null },
 };
 
+/* Dark Harbour tokens. The visor is night; the panels use the light sheet. */
+const VISOR = {
+  ink: '#EBEBEB',
+  muted: '#B1B1B1',
+  lead: '#58A2C6',
+  line: '#606060',
+};
+const FACE = "'Public Sans', system-ui, sans-serif";
+
 /* ═══════════ CATÁLOGO DE ESTRELLAS REALES ═══════════
    [nombre, constelación, RA (horas), Dec (grados), magnitud, distancia (al), clase espectral] */
 const SPECTRAL_COLOR = {
@@ -268,8 +277,6 @@ function renderLoop(t) {
   ctx.arc(App.cx, App.cy, App.visorRadius, 0, Math.PI * 2);
   ctx.clip();
 
-  drawWindRose(ctx);
-  drawRadarSweep(ctx, dt);
   drawStars(ctx, t / 1000);
   drawStarLabels(ctx);
   drawStarSelection(ctx, t / 1000);
@@ -287,105 +294,29 @@ function renderLoop(t) {
   requestAnimationFrame(renderLoop);
 }
 
-/* ── Rosa de los vientos de 8 puntas, tenue, gira con la brújula ── */
-function drawWindRose(ctx) {
-  const R = App.visorRadius * 0.52;
-  const cx = App.cx, cy = App.cy;
-  const base = -App.state.rotacionBrujula * DEG;
-
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(base);
-
-  for (let i = 0; i < 8; i++) {
-    const major = i % 2 === 0;
-    const a = i * 45 * DEG - Math.PI / 2;
-    const len = major ? R : R * 0.6;
-    const half = major ? R * 0.08 : R * 0.055;
-    const px = Math.cos(a), py = Math.sin(a);
-    const ox = -py, oy = px; // perpendicular
-
-    // mitad clara
-    ctx.fillStyle = major ? 'rgba(212, 166, 56, 0.14)' : 'rgba(212, 166, 56, 0.09)';
-    ctx.beginPath();
-    ctx.moveTo(px * len, py * len);
-    ctx.lineTo(ox * half, oy * half);
-    ctx.lineTo(0, 0);
-    ctx.closePath();
-    ctx.fill();
-
-    // mitad sombreada
-    ctx.fillStyle = major ? 'rgba(138, 109, 47, 0.1)' : 'rgba(138, 109, 47, 0.06)';
-    ctx.beginPath();
-    ctx.moveTo(px * len, py * len);
-    ctx.lineTo(-ox * half, -oy * half);
-    ctx.lineTo(0, 0);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  // círculos concéntricos del medallón central
-  ctx.strokeStyle = 'rgba(212, 166, 56, 0.16)';
-  ctx.lineWidth = 1;
-  for (const rr of [R * 0.18, R * 0.09]) {
-    ctx.beginPath();
-    ctx.arc(0, 0, rr, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  ctx.restore();
-}
-
-/* ── Barrido de radar rotatorio ── */
-function drawRadarSweep(ctx, dt) {
-  App.state.sweepAngle = (App.state.sweepAngle + dt * 40) % 360;
-  const a = App.state.sweepAngle * DEG;
-  const grad = ctx.createConicGradient
-    ? ctx.createConicGradient(a, App.cx, App.cy)
-    : null;
-  if (grad) {
-    grad.addColorStop(0, 'rgba(42, 61, 143, 0.14)');
-    grad.addColorStop(0.08, 'rgba(42, 61, 143, 0.04)');
-    grad.addColorStop(0.2, 'rgba(42, 61, 143, 0)');
-    grad.addColorStop(1, 'rgba(42, 61, 143, 0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(App.cx, App.cy, App.visorRadius, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
-/* ── Estrellas con parpadeo sinusoidal ── */
+/* ── Estrellas: el tamaño es la magnitud. El color es la clase espectral. ── */
 function drawStars(ctx, time) {
   for (const s of App.stars) {
     if (s.el < -12) continue;               // bajo el horizonte, fuera de vista
     const p = projectAzEl(s.az, s.el);
     if (p.r > App.visorRadius * 1.05 || p.r < 0) continue;
 
-    // parpadean, pero nunca desaparecen (piso de 0.65)
-    const twinkle = 0.65 + 0.35 * (0.5 + 0.5 * Math.sin(time * s.speed * 2 + s.phase));
-
-    ctx.globalAlpha = twinkle;
+    ctx.globalAlpha = 1;
     ctx.fillStyle = s.color;
-    ctx.shadowColor = s.color;
-    ctx.shadowBlur = s.size * 4;
     ctx.beginPath();
     ctx.arc(p.x, p.y, s.size, 0, Math.PI * 2);
     ctx.fill();
-    ctx.shadowBlur = 0;
 
-    // halo suave en las más brillantes
     if (s.size > 2.2) {
-      ctx.globalAlpha = twinkle * 0.3;
+      ctx.globalAlpha = 0.28;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, s.size * 3, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, s.size * 2, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // cruz de difracción en las mayores
     if (s.spike) {
-      const len = s.size * 5 * twinkle;
-      ctx.globalAlpha = twinkle * 0.8;
+      const len = s.size * 4;
+      ctx.globalAlpha = 0.7;
       ctx.strokeStyle = s.color;
       ctx.lineWidth = 0.8;
       ctx.beginPath();
@@ -412,12 +343,9 @@ function drawStarLabels(ctx) {
     if (p.r > App.visorRadius * 0.95 || p.r < 6) continue;
 
     const bright = s.mag <= 1.5;
-    ctx.font = `${compact ? (bright ? 10 : 9) : (bright ? 13 : 11)}px 'IBM Plex Mono', 'Courier New', monospace`;
-    ctx.fillStyle = bright ? 'rgba(245, 236, 210, 0.95)' : 'rgba(245, 236, 210, 0.72)';
-    ctx.shadowColor = 'rgba(0,0,0,0.9)';
-    ctx.shadowBlur = 4;
+    ctx.font = `${compact ? 12 : (bright ? 14 : 13)}px ${FACE}`;
+    ctx.fillStyle = bright ? VISOR.ink : VISOR.muted;
     ctx.fillText(s.name, p.x + s.size + 7, p.y);
-    ctx.shadowBlur = 0;
   }
 }
 
@@ -434,32 +362,19 @@ function drawFocusReadout(ctx) {
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  ctx.shadowColor = 'rgba(0,0,0,0.85)';
-  ctx.shadowBlur = 6;
 
-  if (!compact) {
-    ctx.font = "12px 'IBM Plex Mono', 'Courier New', monospace";
-    ctx.fillStyle = 'rgba(240, 226, 196, 0.85)';
-    ctx.fillText('ESTRELLA EN LA MIRA', cx, y);
-  }
+  ctx.font = compact ? `600 16px ${FACE}` : `600 20px ${FACE}`;
+  ctx.fillStyle = VISOR.ink;
+  ctx.fillText(s.name, cx, y);
 
-  ctx.font = compact
-    ? "700 15px 'Source Serif 4', Georgia, serif"
-    : "700 22px 'Source Serif 4', Georgia, serif";
-  ctx.fillStyle = '#f0e2c4';
-  ctx.fillText(s.name, cx, compact ? y : y + 18);
-
-  ctx.font = compact
-    ? "11px 'Source Serif 4', Georgia, serif"
-    : "13px 'Source Serif 4', Georgia, serif";
-  ctx.fillStyle = 'rgba(240, 226, 196, 0.9)';
+  ctx.font = `400 ${compact ? 13 : 14}px ${FACE}`;
+  ctx.fillStyle = VISOR.muted;
   ctx.fillText(
-    s.constellation + '  ·  mag ' + s.mag.toFixed(2),
+    s.constellation + '   mag ' + s.mag.toFixed(2),
     cx,
-    compact ? y + 18 : y + 44
+    y + (compact ? 20 : 26)
   );
 
-  ctx.shadowBlur = 0;
   ctx.restore();
 }
 
@@ -470,36 +385,26 @@ function drawStarSelection(ctx, time) {
   const p = projectAzEl(s.az, s.el);
   if (p.r > App.visorRadius * 1.1) return;
 
-  const pulse = 0.5 + 0.5 * Math.sin(time * 4);
-  ctx.strokeStyle = '#c9a227';
-  ctx.lineWidth = 1.6;
-  ctx.shadowColor = 'rgba(201, 162, 39, 0.55)';
-  ctx.shadowBlur = 8;
-  ctx.globalAlpha = 0.6 + 0.4 * pulse;
+  ctx.strokeStyle = VISOR.lead;
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.arc(p.x, p.y, 12 + pulse * 4, 0, Math.PI * 2);
+  ctx.arc(p.x, p.y, 14, 0, Math.PI * 2);
   ctx.stroke();
 
-  // cuatro muescas de telescopio alrededor del anillo
   for (let k = 0; k < 4; k++) {
     const a = k * Math.PI / 2 + Math.PI / 4;
-    const r1 = 16 + pulse * 4, r2 = r1 + 6;
+    const r1 = 18, r2 = 24;
     ctx.beginPath();
     ctx.moveTo(p.x + r1 * Math.cos(a), p.y + r1 * Math.sin(a));
     ctx.lineTo(p.x + r2 * Math.cos(a), p.y + r2 * Math.sin(a));
     ctx.stroke();
   }
-  ctx.shadowBlur = 0;
-  ctx.globalAlpha = 1;
 
-  ctx.font = "600 16px 'Source Serif 4', Georgia, serif";
+  ctx.font = `600 15px ${FACE}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
-  ctx.fillStyle = '#f0e2c4';
-  ctx.shadowColor = 'rgba(0,0,0,0.9)';
-  ctx.shadowBlur = 4;
+  ctx.fillStyle = VISOR.ink;
   ctx.fillText(s.name, p.x, p.y - 22);
-  ctx.shadowBlur = 0;
 }
 
 /* ── Flecha-guía en el borde del visor hacia el astro (modo AR o fuera de vista) ── */
@@ -519,9 +424,7 @@ function drawGuideArrow(ctx) {
   ctx.save();
   ctx.translate(ex, ey);
   ctx.rotate(a);
-  ctx.fillStyle = '#d4a638';
-  ctx.shadowColor = '#d4a638';
-  ctx.shadowBlur = 10;
+  ctx.fillStyle = VISOR.lead;
   ctx.beginPath();
   ctx.moveTo(14, 0);
   ctx.lineTo(-8, -9);
@@ -529,12 +432,11 @@ function drawGuideArrow(ctx) {
   ctx.lineTo(-8, 9);
   ctx.closePath();
   ctx.fill();
-  ctx.shadowBlur = 0;
   ctx.restore();
 
-  ctx.font = "12px 'IBM Plex Mono', 'Courier New', monospace";
+  ctx.font = `500 13px ${FACE}`;
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#c9a227';
+  ctx.fillStyle = VISOR.lead;
   const lx = App.cx + (edge - 26) * Math.cos(a);
   const ly = App.cy + (edge - 26) * Math.sin(a);
   ctx.fillText(s.name.toUpperCase(), lx, ly);
@@ -648,7 +550,7 @@ function updateStarCard() {
   card.classList.remove('hidden');
   document.getElementById('star-name').textContent = s.name;
   document.getElementById('star-constellation').textContent =
-    'Constelación ' + s.constellation + (s.spectral ? ' · tipo ' + s.spectral : '');
+    'Constelación ' + s.constellation + (s.spectral ? ', tipo ' + s.spectral : '');
   document.getElementById('star-lore').textContent = s.lore;
 }
 
@@ -658,16 +560,16 @@ setInterval(() => {
   const el = document.getElementById('star-data');
   if (!s || !el) return;
   el.textContent =
-    `mag ${s.mag.toFixed(2)} · ${s.distLy < 100 ? s.distLy.toFixed(1) : Math.round(s.distLy)} años luz · ` +
-    `az ${String(Math.round(s.az)).padStart(3, '0')}° · el ${s.el >= 0 ? '+' : '−'}${Math.abs(Math.round(s.el))}°` +
-    (s.el <= 2 ? ' · bajo el horizonte' : '');
+    `mag ${s.mag.toFixed(2)}, ${s.distLy < 100 ? s.distLy.toFixed(1) : Math.round(s.distLy)} años luz, ` +
+    `az ${String(Math.round(s.az)).padStart(3, '0')}°, el ${s.el >= 0 ? '+' : '−'}${Math.abs(Math.round(s.el))}°` +
+    (s.el <= 2 ? ', bajo el horizonte' : '');
 }, 250);
 
 /* ── Anillo del horizonte (Elevación 0°) ── */
 function drawHorizonRing(ctx) {
   const r = App.visorRadius * (1 - App.state.pitchOffset / 90);
   if (r <= 0) return;
-  ctx.strokeStyle = 'rgba(212, 166, 56, 0.28)';
+  ctx.strokeStyle = VISOR.line;
   ctx.setLineDash([6, 8]);
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -676,53 +578,25 @@ function drawHorizonRing(ctx) {
   ctx.setLineDash([]);
 }
 
-/* ── Brújula perimetral de latón con marcas de grados ── */
+/* ── Aro de rumbo: un círculo, marcas y la inicial del norte ── */
 function drawCompassRing(ctx) {
   const R = App.visorRadius;
   const theta = App.state.rotacionBrujula;
 
-  // aro exterior doble de latón (tapa de brújula náutica)
-  ctx.strokeStyle = 'rgba(138, 109, 47, 0.95)';
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.arc(App.cx, App.cy, R + 9, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.strokeStyle = 'rgba(212, 166, 56, 0.75)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.arc(App.cx, App.cy, R + 4, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.strokeStyle = 'rgba(212, 166, 56, 0.55)';
+  ctx.strokeStyle = VISOR.line;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.arc(App.cx, App.cy, R - 2, 0, Math.PI * 2);
   ctx.stroke();
 
-  // remaches del aro exterior cada 45° (fijos, no giran)
-  for (let deg = 22.5; deg < 360; deg += 45) {
-    const a = deg * DEG;
-    const rx = App.cx + (R + 9) * Math.cos(a);
-    const ry = App.cy + (R + 9) * Math.sin(a);
-    const g = ctx.createRadialGradient(rx - 1, ry - 1, 0.5, rx, ry, 3.5);
-    g.addColorStop(0, '#e8c76a');
-    g.addColorStop(1, '#4a3a18');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(rx, ry, 3.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // marcas cada 5°, mayores cada 15°, cardinales cada 90°
   const cardinals = { 0: 'N', 90: 'E', 180: 'S', 270: 'O' };
   for (let deg = 0; deg < 360; deg += 5) {
     const a = (deg - theta - 90) * DEG;
     const major = deg % 15 === 0;
     const inner = R - (major ? 14 : 7);
 
-    ctx.strokeStyle = major ? 'rgba(212, 166, 56, 0.85)' : 'rgba(212, 166, 56, 0.4)';
-    ctx.lineWidth = major ? 1.6 : 1;
+    ctx.strokeStyle = major ? VISOR.ink : VISOR.muted;
+    ctx.lineWidth = major ? 1.5 : 1;
     ctx.beginPath();
     ctx.moveTo(App.cx + inner * Math.cos(a), App.cy + inner * Math.sin(a));
     ctx.lineTo(App.cx + (R - 2) * Math.cos(a), App.cy + (R - 2) * Math.sin(a));
@@ -730,47 +604,27 @@ function drawCompassRing(ctx) {
 
     if (deg in cardinals) {
       const isNorth = deg === 0;
-
-      // rombo náutico apuntando al centro
-      const tipR = R - 16;
-      const baseR = R - 44;
-      const halfW = 6;
-      const px = Math.cos(a), py = Math.sin(a);
-      const ox = -py, oy = px;
-      ctx.fillStyle = isNorth ? 'rgba(255, 91, 77, 0.85)' : 'rgba(212, 166, 56, 0.7)';
-      ctx.beginPath();
-      ctx.moveTo(App.cx + tipR * px, App.cy + tipR * py);
-      ctx.lineTo(App.cx + ((tipR + baseR) / 2) * px + halfW * ox, App.cy + ((tipR + baseR) / 2) * py + halfW * oy);
-      ctx.lineTo(App.cx + baseR * px, App.cy + baseR * py);
-      ctx.lineTo(App.cx + ((tipR + baseR) / 2) * px - halfW * ox, App.cy + ((tipR + baseR) / 2) * py - halfW * oy);
-      ctx.closePath();
-      ctx.fill();
-
-      const tr = R - 58;
-      ctx.font = `600 ${isNorth ? 20 : 16}px 'Source Serif 4', Georgia, serif`;
+      const tr = R - 36;
+      ctx.font = `600 ${isNorth ? 18 : 15}px ${FACE}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = isNorth ? '#ff5b4d' : '#c9a227';
-      ctx.shadowColor = 'rgba(0,0,0,0.9)';
-      ctx.shadowBlur = 4;
+      ctx.fillStyle = isNorth ? VISOR.lead : VISOR.ink;
       ctx.fillText(cardinals[deg], App.cx + tr * Math.cos(a), App.cy + tr * Math.sin(a));
-      ctx.shadowBlur = 0;
     } else if (deg % 45 === 0) {
-      const tr = R - 26;
-      ctx.font = "11px 'IBM Plex Mono', 'Courier New', monospace";
+      const tr = R - 28;
+      ctx.font = `400 12px ${FACE}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = 'rgba(240, 226, 196, 0.8)';
-      ctx.fillText(String(deg).padStart(3, '0'), App.cx + tr * Math.cos(a), App.cy + tr * Math.sin(a));
+      ctx.fillStyle = VISOR.muted;
+      ctx.fillText(String(deg), App.cx + tr * Math.cos(a), App.cy + tr * Math.sin(a));
     }
   }
 
-  // aguja fija del rumbo actual (arriba del visor)
-  ctx.fillStyle = '#ff5b4d';
+  ctx.fillStyle = VISOR.lead;
   ctx.beginPath();
-  ctx.moveTo(App.cx, App.cy - R + 4);
-  ctx.lineTo(App.cx - 7, App.cy - R - 14);
-  ctx.lineTo(App.cx + 7, App.cy - R - 14);
+  ctx.moveTo(App.cx, App.cy - R + 6);
+  ctx.lineTo(App.cx - 6, App.cy - R - 8);
+  ctx.lineTo(App.cx + 6, App.cy - R - 8);
   ctx.closePath();
   ctx.fill();
 }
