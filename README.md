@@ -1,9 +1,16 @@
-# El Telescopio Digital (TelescopioAR)
+# Sextant (El Telescopio Digital)
 
-Telescopio de Realidad Aumentada para navegantes modernos. Alinea un firmamento
-virtual sobre la cámara en vivo de tu dispositivo, rastrea la ISS y el Hubble en
-tiempo real con el algoritmo **SGP4** (`satellite.js`) sobre datos TLE reales, y
-desbloquea un radiomensaje pirata si logras mantener un satélite en la mira.
+La raíz del sitio es solo la portada. El visor —cámara, cielo, ISS, Hubble—
+sigue en el repositorio y no se puede abrir desde la interfaz.
+
+Para volver a publicarlo: en `js/config.js`, pon `visor: true`.
+Con eso `/instrument.html` deja de redirigir a la portada. Para que la raíz
+sea el visor otra vez, sustituye `index.html` por `instrument.html` y quita
+el script que redirige.
+
+Telescopio de Realidad Aumentada. Alinea un firmamento virtual sobre la cámara
+en vivo, rastrea la ISS y el Hubble en tiempo real con **SGP4** (`satellite.js`)
+sobre datos TLE, y abre un despacho de demo si mantienes un satélite en la mira.
 
 SPA 100% frontend: sin backend, sin build step, sin dependencias instaladas.
 
@@ -33,7 +40,9 @@ En iOS, el permiso del giroscopio se solicita al tocar "INICIAR TRAVESÍA"
 
 | Archivo | Qué hace |
 |---|---|
-| `index.html` | Layout, video de cámara, canvas, paneles, overlay de inicio y terminal |
+| `index.html` | Portada. No enlaza al visor |
+| `instrument.html` | Visor completo. Redirige a `/` mientras `visor` es false |
+| `js/config.js` | Interruptor `visor` para volver a publicar el radar |
 | `css/styles.css` | Papel, tinta y latón. Serif para los títulos, sans para las lecturas |
 | `js/starfield.js` | Estado global, proyección Az/El → canvas, visor, brújula, 150 estrellas |
 | `js/sensors.js` | Cámara trasera, `deviceorientation`, geolocalización, fallback de arrastre |
