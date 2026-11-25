@@ -165,12 +165,12 @@
   }
 
   function drawOcean() {
-    ctx.fillStyle = '#F3F3F3';
+    ctx.fillStyle = '#F3E6D0';
     ctx.fillRect(0, 0, W, H);
   }
 
   function drawGraticule() {
-    ctx.strokeStyle = '#E4E4E4';
+    ctx.strokeStyle = '#E4D5BC';
     ctx.lineWidth = 0.5;
     ctx.beginPath();
     for (let lon = -180; lon <= 180; lon += 30) {
@@ -184,7 +184,7 @@
     ctx.stroke();
 
     // ecuador remarcado
-    ctx.strokeStyle = '#909090';
+    ctx.strokeStyle = '#8C7356';
     ctx.lineWidth = 0.8;
     ctx.beginPath();
     ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2);
@@ -201,9 +201,9 @@
         else ctx.lineTo(p.x, p.y);
       }
       ctx.closePath();
-      ctx.fillStyle = '#A0A0A0';
+      ctx.fillStyle = '#C4A882';
       ctx.fill();
-      ctx.strokeStyle = '#909090';
+      ctx.strokeStyle = '#8C7356';
       ctx.lineWidth = 0.8;
       ctx.stroke();
     }
@@ -223,7 +223,7 @@
     ctx.beginPath();
     ctx.rect(0, 0, W, H);
     ctx.clip();
-    ctx.fillStyle = '#161616';
+    ctx.fillStyle = '#1C1008';
     ctx.globalAlpha = 0.08;
     ctx.beginPath();
     let started = false;
@@ -309,8 +309,8 @@
     // diamante de latón
     ctx.save();
     ctx.translate(p.x, p.y);
-    ctx.fillStyle = '#161616';
-    ctx.strokeStyle = '#FFFFFF';
+    ctx.fillStyle = '#1C1008';
+    ctx.strokeStyle = '#F6F0E4';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, -4); ctx.lineTo(4, 0); ctx.lineTo(0, 4); ctx.lineTo(-4, 0);
@@ -321,14 +321,14 @@
     ctx.font = "500 11px 'Public Sans', system-ui, sans-serif";
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillStyle = '#161616';
+    ctx.fillStyle = '#1C1008';
     ctx.fillText('Navío', p.x, p.y + 6);
   }
 
   /* ── Traza de tierra de la ISS (línea punteada, con corte en ±180) ── */
   function drawTrack() {
     if (track.length < 2) return;
-    ctx.strokeStyle = '#459AC2';
+    ctx.strokeStyle = '#7A5B24';
     ctx.lineWidth = 1;
     ctx.setLineDash([2, 3]);
     ctx.beginPath();

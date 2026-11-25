@@ -43,10 +43,10 @@ const App = {
 
 /* Dark Harbour tokens. The visor is night; the panels use the light sheet. */
 const VISOR = {
-  ink: '#EBEBEB',
-  muted: '#B1B1B1',
-  lead: '#58A2C6',
-  line: '#606060',
+  ink: '#F6F0E4',
+  muted: '#D9C7A6',
+  lead: '#E0C27A',
+  line: '#8A7355',
 };
 const FACE = "'Public Sans', system-ui, sans-serif";
 
