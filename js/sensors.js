@@ -17,6 +17,33 @@ const Sensors = {
   listening: false,              // el listener está enganchado
 };
 
+/* The feed is shown only while a video track is actually playing.
+   Loading, a denial, or a missing device leave the space backdrop visible. */
+function cameraStreamLive(video) {
+  const stream = video && video.srcObject;
+  if (!stream || typeof stream.getVideoTracks !== 'function') return false;
+  const playing = stream.getVideoTracks().some((track) => track.readyState === 'live' && track.enabled && !track.muted);
+  return playing && video.readyState >= 2 && !video.paused && !video.ended;
+}
+
+function syncCameraLayer(video) {
+  document.body.classList.toggle('camera-live', cameraStreamLive(video));
+}
+
+function watchCameraStream(video, stream) {
+  const sync = () => syncCameraLayer(video);
+  video.addEventListener('playing', sync);
+  video.addEventListener('loadeddata', sync);
+  video.addEventListener('emptied', sync);
+  video.addEventListener('ended', sync);
+  video.addEventListener('pause', sync);
+  for (const track of stream.getVideoTracks()) {
+    track.addEventListener('ended', sync);
+    track.addEventListener('mute', sync);
+    track.addEventListener('unmute', sync);
+  }
+}
+
 /* ── Cámara trasera proyectada al fondo ── */
 async function initCamera() {
   const video = document.getElementById('camera-feed');
@@ -29,10 +56,13 @@ async function initCamera() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       video.srcObject = stream;
+      watchCameraStream(video, stream);
       await video.play().catch(() => {});
+      syncCameraLayer(video);
       return true;
     } catch (_) { /* probar la siguiente restricción */ }
   }
+  syncCameraLayer(video);
   console.warn('Sin cámara: se navega sobre el abismo oscuro.');
   return false;
 }

@@ -67,8 +67,42 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-/* The feed stays underneath. This scrim only cools it toward night. */
-#camera-tint {
+/* Behind the feed. Visible while the camera is absent, loading, or denied. */
+#space-backdrop {
+  background-color: #050814;
+  background-image:
+    radial-gradient(ellipse at center, #1a2750 0%, #0c142c 46%, #070b18 74%, #03060e 100%);
+}
+
+#space-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.2px 1.2px at 8% 16%, rgba(246, 240, 228, 0.75) 50%, transparent 52%),
+    radial-gradient(1px 1px at 18% 42%, rgba(201, 212, 232, 0.55) 50%, transparent 52%),
+    radial-gradient(1px 1px at 27% 22%, rgba(246, 240, 228, 0.4) 50%, transparent 52%),
+    radial-gradient(1.4px 1.4px at 36% 68%, rgba(224, 194, 122, 0.45) 50%, transparent 52%),
+    radial-gradient(1px 1px at 44% 14%, rgba(201, 212, 232, 0.5) 50%, transparent 52%),
+    radial-gradient(1px 1px at 52% 36%, rgba(246, 240, 228, 0.35) 50%, transparent 52%),
+    radial-gradient(1.2px 1.2px at 61% 78%, rgba(246, 240, 228, 0.6) 50%, transparent 52%),
+    radial-gradient(1px 1px at 70% 24%, rgba(201, 212, 232, 0.45) 50%, transparent 52%),
+    radial-gradient(1px 1px at 78% 52%, rgba(246, 240, 228, 0.4) 50%, transparent 52%),
+    radial-gradient(1.3px 1.3px at 86% 18%, rgba(224, 194, 122, 0.4) 50%, transparent 52%),
+    radial-gradient(1px 1px at 92% 64%, rgba(246, 240, 228, 0.55) 50%, transparent 52%),
+    radial-gradient(1px 1px at 14% 82%, rgba(201, 212, 232, 0.4) 50%, transparent 52%),
+    radial-gradient(1px 1px at 48% 88%, rgba(246, 240, 228, 0.35) 50%, transparent 52%),
+    radial-gradient(1px 1px at 64% 8%, rgba(201, 212, 232, 0.45) 50%, transparent 52%),
+    radial-gradient(1px 1px at 33% 48%, rgba(246, 240, 228, 0.3) 50%, transparent 52%);
+  background-repeat: no-repeat;
+}
+
+#camera-feed { visibility: hidden; }
+body.camera-live #camera-feed { visibility: visible; }
+
+/* The scrim only cools a live feed. Without a stream the space field stays clear. */
+#camera-tint { background: none; }
+body.camera-live #camera-tint {
   background:
     radial-gradient(ellipse at center, rgba(14, 24, 52, 0.42) 0%, rgba(5, 8, 20, 0.74) 58%, rgba(3, 5, 12, 0.9) 100%);
 }
