@@ -1,29 +1,27 @@
-/* El Telescopio Digital — light chrome, night visor.
-   Palette: Harbour, generated, not picked by eye.
-   node /tmp/oxfords/skills/oxfords/scripts/palette.mjs Harbour --mode both --ground white,black
-   Lead stays off controls (it sits near info). Support and pop are unused:
-   support sits near danger, and neither has a job on this screen.
-   Visor tokens are the same sheet's dark values. The sky is always night,
-   even while the panels stay on the light ground.
-   Type: Public Sans, because the screen is a set of readings scanned at
-   arm's length, and this face is drawn for that without being Inter or Geist. */
+/* El Telescopio Digital — parchment chrome, night visor.
+   The browns are the original instrument inks: paper #F6F0E4, ink #1C1008,
+   brass #7A5B24. Checked at 7.76:1, 16.42:1 and 5.52:1.
+   Source Serif 4 is only the display face. Public Sans carries the readings.
+   A static grain sits on the paper. It does not move. */
 
 :root {
   color-scheme: light;
-  --page: #FFFFFF; --surface: #FAFAFA; --surface-2: #F3F3F3; --selected: #EBEBEB;
-  --line: #E4E4E4; --line-strong: #909090; --focus: #16759C; --overlay: #00000066;
-  --text: #161616; --text-2: #484848; --text-3: #6A6A6A; --text-disabled: #A0A0A0;
-  --action: #161616; --action-hover: #222222; --action-pressed: #070707; --on-action: #FFFFFF;
-  --control: #EEEEEE; --control-hover: #E1E1E1; --control-pressed: #D4D4D4;
-  --lead-ink: #16759C;
-  --series-1: #459AC2; --series-6: #6C6C6C;
-  --danger-ink: #C31B1F; --danger-tint: #FFEBE8;
-  --success-ink: #007433; --success-tint: #E0F7E4;
-  --visor-ink: #EBEBEB;
-  --visor-muted: #B1B1B1;
-  --visor-lead: #58A2C6;
-  --visor-line: #606060;
-  --visor-ground: #000000;
+  --page: #F6F0E4; --surface: #FBF6EC; --surface-2: #F3E6D0; --selected: #EADCC4;
+  --line: #E4D5BC; --line-strong: #8C7356; --focus: #7A5B24; --overlay: #1A0E08B8;
+  --text: #1C1008; --text-2: #5C4636; --text-3: #6A5344; --text-disabled: #A89880;
+  --action: #1C1008; --action-hover: #2C1C12; --action-pressed: #100904; --on-action: #F6F0E4;
+  --control: #EFE4D0; --control-hover: #E7D8BE; --control-pressed: #DDCCAE;
+  --lead-ink: #7A5B24;
+  --series-1: #7A5B24; --series-6: #1C1008;
+  --danger-ink: #8B2E1A; --danger-tint: #F6E4DC;
+  --success-ink: #3E4E28; --success-tint: #E4EBD4;
+  --visor-ink: #F6F0E4;
+  --visor-muted: #D9C7A6;
+  --visor-lead: #E0C27A;
+  --visor-line: #8A7355;
+  --visor-ground: #050814;
+  --display: "Source Serif 4", Georgia, serif;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -69,9 +67,44 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-/* Camera stays visible. One flat scrim, so light visor marks keep contrast. */
-#camera-tint {
-  background: var(--overlay);
+/* Behind the feed. Visible while the camera is absent, loading, or denied. */
+#space-backdrop {
+  background-color: #050814;
+  background-image:
+    radial-gradient(ellipse at center, #1a2750 0%, #0c142c 46%, #070b18 74%, #03060e 100%);
+}
+
+#space-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.2px 1.2px at 8% 16%, rgba(246, 240, 228, 0.75) 50%, transparent 52%),
+    radial-gradient(1px 1px at 18% 42%, rgba(201, 212, 232, 0.55) 50%, transparent 52%),
+    radial-gradient(1px 1px at 27% 22%, rgba(246, 240, 228, 0.4) 50%, transparent 52%),
+    radial-gradient(1.4px 1.4px at 36% 68%, rgba(224, 194, 122, 0.45) 50%, transparent 52%),
+    radial-gradient(1px 1px at 44% 14%, rgba(201, 212, 232, 0.5) 50%, transparent 52%),
+    radial-gradient(1px 1px at 52% 36%, rgba(246, 240, 228, 0.35) 50%, transparent 52%),
+    radial-gradient(1.2px 1.2px at 61% 78%, rgba(246, 240, 228, 0.6) 50%, transparent 52%),
+    radial-gradient(1px 1px at 70% 24%, rgba(201, 212, 232, 0.45) 50%, transparent 52%),
+    radial-gradient(1px 1px at 78% 52%, rgba(246, 240, 228, 0.4) 50%, transparent 52%),
+    radial-gradient(1.3px 1.3px at 86% 18%, rgba(224, 194, 122, 0.4) 50%, transparent 52%),
+    radial-gradient(1px 1px at 92% 64%, rgba(246, 240, 228, 0.55) 50%, transparent 52%),
+    radial-gradient(1px 1px at 14% 82%, rgba(201, 212, 232, 0.4) 50%, transparent 52%),
+    radial-gradient(1px 1px at 48% 88%, rgba(246, 240, 228, 0.35) 50%, transparent 52%),
+    radial-gradient(1px 1px at 64% 8%, rgba(201, 212, 232, 0.45) 50%, transparent 52%),
+    radial-gradient(1px 1px at 33% 48%, rgba(246, 240, 228, 0.3) 50%, transparent 52%);
+  background-repeat: no-repeat;
+}
+
+#camera-feed { visibility: hidden; }
+body.camera-live #camera-feed { visibility: visible; }
+
+/* The scrim only cools a live feed. Without a stream the space field stays clear. */
+#camera-tint { background: none; }
+body.camera-live #camera-tint {
+  background:
+    radial-gradient(ellipse at center, rgba(14, 24, 52, 0.42) 0%, rgba(5, 8, 20, 0.74) 58%, rgba(3, 5, 12, 0.9) 100%);
 }
 
 #vignette,
@@ -92,18 +125,64 @@ button:focus-visible {
   pointer-events: none;
 }
 
+.ui-panel:not(#panel-controls),
+#start-overlay,
+.terminal-frame { isolation: isolate; }
+
+.ui-panel:not(#panel-controls)::before,
+#start-overlay::before,
+.terminal-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: var(--grain);
+  mix-blend-mode: multiply;
+}
+
+.ui-panel > *,
+.start-frame,
+.terminal-header,
+#terminal-body {
+  position: relative;
+  z-index: 1;
+}
+
 body.sailing .ui-panel {
   opacity: 1;
   pointer-events: auto;
 }
 
 .panel-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0 0 var(--space-2);
-  font-size: var(--step-ui);
+  font-family: var(--display);
+  font-size: 1.05rem;
   font-weight: 600;
-  letter-spacing: 0;
+  letter-spacing: -0.02em;
   line-height: 1.3;
   color: var(--text);
+}
+
+#panel-sats .panel-title { justify-content: flex-end; }
+
+.mark {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  display: block;
+}
+
+.mark-lg {
+  width: 28px;
+  height: 28px;
+  margin-bottom: var(--space-4);
+  color: var(--lead-ink);
 }
 
 .kv {
@@ -163,7 +242,13 @@ body.sailing .ui-panel {
 }
 
 #panel-bearing .kv { grid-template-columns: 4.75rem auto; }
-#panel-bearing dd { font-size: var(--step-title); font-weight: 500; line-height: 1.2; }
+#panel-bearing dd {
+  font-family: var(--display);
+  font-size: var(--step-title);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
 
 #panel-controls {
   right: var(--space-5);
@@ -248,10 +333,11 @@ body.sailing .ui-panel {
 
 #star-name {
   margin: 0;
-  font-size: var(--step-title);
+  font-family: var(--display);
+  font-size: 1.5rem;
   font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
   text-wrap: balance;
 }
 
@@ -285,6 +371,10 @@ body.sailing .ui-panel {
 
 .btn-primary,
 .calibrate-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
   border: 1px solid transparent;
   background: var(--action);
   color: var(--on-action);
@@ -380,10 +470,11 @@ body.sailing .calibrate-btn {
 
 .start-frame h1 {
   margin: 0;
+  font-family: var(--display);
   font-size: var(--step-display);
   font-weight: 600;
   letter-spacing: -0.03em;
-  line-height: 1.1;
+  line-height: 1.05;
   text-wrap: balance;
   color: var(--text);
 }
@@ -411,6 +502,7 @@ body.sailing .calibrate-btn {
 #terminal-overlay.open { display: flex; }
 
 .terminal-frame {
+  position: relative;
   width: min(40rem, 100%);
   background: var(--surface);
   color: var(--text);
@@ -429,9 +521,14 @@ body.sailing .calibrate-btn {
 }
 
 .terminal-header h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0;
-  font-size: var(--step-ui);
+  font-family: var(--display);
+  font-size: 1.15rem;
   font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 #terminal-body {

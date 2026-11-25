@@ -11,16 +11,16 @@ const SATELLITES = [
     label: 'ISS (ZARYA)',
     tle1: '1 25544U 98067A   26197.51864197  .00014389  00000-0  25368-3 0  9993',
     tle2: '2 25544  51.6421  74.3215 0001241 123.4111 281.3322 15.49817452528143',
-    color: '#459AC2',
-    sky: '#58A2C6',
+    color: '#7A5B24',
+    sky: '#E0C27A',
   },
   {
     name: 'HUBBLE',
     label: 'HUBBLE SPACE TELESCOPE',
     tle1: '1 20580U 90037B   26197.12345678  .00001234  00000-0  10000-3 0  9991',
     tle2: '2 20580  28.4682 112.3411 0002341 210.1111 149.8888 14.99213452991234',
-    color: '#6C6C6C',
-    sky: '#EBEBEB',
+    color: '#1C1008',
+    sky: '#F6F0E4',
   },
 ];
 
@@ -118,6 +118,12 @@ function drawSatellites(ctx, time) {
     if (p.r > App.visorRadius * 1.1) continue;
 
     const ink = sat.sky || sat.color;
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = ink;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
     ctx.strokeStyle = ink;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
