@@ -118,6 +118,12 @@ function drawSatellites(ctx, time) {
     if (p.r > App.visorRadius * 1.1) continue;
 
     const ink = sat.sky || sat.color;
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = ink;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
     ctx.strokeStyle = ink;
     ctx.lineWidth = 1.5;
     ctx.beginPath();

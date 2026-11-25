@@ -19,7 +19,7 @@
   --visor-muted: #D9C7A6;
   --visor-lead: #E0C27A;
   --visor-line: #8A7355;
-  --visor-ground: #1A0E08;
+  --visor-ground: #050814;
   --display: "Source Serif 4", Georgia, serif;
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --space-1: 4px;
@@ -67,9 +67,10 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-/* Camera stays visible. One flat scrim, so light visor marks keep contrast. */
+/* The feed stays underneath. This scrim only cools it toward night. */
 #camera-tint {
-  background: var(--overlay);
+  background:
+    radial-gradient(ellipse at center, rgba(14, 24, 52, 0.42) 0%, rgba(5, 8, 20, 0.74) 58%, rgba(3, 5, 12, 0.9) 100%);
 }
 
 #vignette,

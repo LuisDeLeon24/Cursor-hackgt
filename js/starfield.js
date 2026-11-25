@@ -50,6 +50,97 @@ const VISOR = {
 };
 const FACE = "'Public Sans', system-ui, sans-serif";
 
+/* Visor-only paint. Catalog positions stay in updateStarPositions. */
+const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+const VisorMotion = { reduce: motionQuery.matches };
+motionQuery.addEventListener('change', (event) => { VisorMotion.reduce = event.matches; });
+
+let dustCanvas = null;
+let glowSprite = null;
+
+function rebuildSpaceAssets() {
+  const compact = App.canvas.width < 700;
+  const count = compact ? 64 : 120;
+  const size = Math.ceil(App.visorRadius * 2);
+  dustCanvas = document.createElement('canvas');
+  dustCanvas.width = size;
+  dustCanvas.height = size;
+  const dctx = dustCanvas.getContext('2d');
+  const cx = size / 2;
+  const cy = size / 2;
+  const radius = App.visorRadius;
+  let seed = 20261125;
+  const rand = () => {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  };
+  for (let i = 0; i < count; i++) {
+    const angle = rand() * Math.PI * 2;
+    const dist = Math.sqrt(rand()) * radius * 0.97;
+    const bright = rand();
+    dctx.globalAlpha = 0.12 + bright * 0.38;
+    dctx.fillStyle = bright > 0.9 ? '#F6F0E4' : '#C9D4E8';
+    dctx.beginPath();
+    dctx.arc(cx + Math.cos(angle) * dist, cy + Math.sin(angle) * dist, bright > 0.93 ? 1.15 : 0.55, 0, Math.PI * 2);
+    dctx.fill();
+  }
+  dctx.globalAlpha = 1;
+
+  glowSprite = document.createElement('canvas');
+  glowSprite.width = 32;
+  glowSprite.height = 32;
+  const gctx = glowSprite.getContext('2d');
+  const glow = gctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  glow.addColorStop(0, 'rgba(255, 248, 232, 0.95)');
+  glow.addColorStop(0.22, 'rgba(224, 194, 122, 0.38)');
+  glow.addColorStop(1, 'rgba(224, 194, 122, 0)');
+  gctx.fillStyle = glow;
+  gctx.fillRect(0, 0, 32, 32);
+}
+
+function drawSpace(ctx, time) {
+  const cx = App.cx;
+  const cy = App.cy;
+  const radius = App.visorRadius;
+  const field = ctx.createRadialGradient(cx, cy - radius * 0.12, radius * 0.05, cx, cy, radius);
+  field.addColorStop(0, 'rgba(22, 34, 68, 0.78)');
+  field.addColorStop(0.5, 'rgba(8, 14, 32, 0.9)');
+  field.addColorStop(1, 'rgba(3, 6, 14, 0.96)');
+  ctx.fillStyle = field;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (dustCanvas) {
+    ctx.drawImage(dustCanvas, cx - dustCanvas.width / 2, cy - dustCanvas.height / 2);
+  }
+
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(224, 194, 122, 0.22)';
+  for (const fraction of [0.34, 0.67]) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius * fraction, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(246, 240, 228, 0.12)';
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius * 0.86, 0, Math.PI * 2);
+  ctx.stroke();
+
+  if (VisorMotion.reduce) return;
+  const sweep = time * 0.18;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(sweep);
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.arc(0, 0, radius, -0.16, 0.02);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(224, 194, 122, 0.08)';
+  ctx.fill();
+  ctx.restore();
+}
+
 /* ═══════════ CATÁLOGO DE ESTRELLAS REALES ═══════════
    [nombre, constelación, RA (horas), Dec (grados), magnitud, distancia (al), clase espectral] */
 const SPECTRAL_COLOR = {
@@ -227,6 +318,7 @@ function resizeCanvas() {
   App.cx = App.canvas.width / 2;
   App.cy = App.canvas.height / 2;
   App.visorRadius = Math.min(App.cx, App.cy) - 30;
+  rebuildSpaceAssets();
 }
 
 /* ── Suavizado del movimiento (interpolación lineal hacia el objetivo) ──
@@ -277,6 +369,7 @@ function renderLoop(t) {
   ctx.arc(App.cx, App.cy, App.visorRadius, 0, Math.PI * 2);
   ctx.clip();
 
+  drawSpace(ctx, t / 1000);
   drawStars(ctx, t / 1000);
   drawStarLabels(ctx);
   drawStarSelection(ctx, t / 1000);
@@ -301,18 +394,19 @@ function drawStars(ctx, time) {
     const p = projectAzEl(s.az, s.el);
     if (p.r > App.visorRadius * 1.05 || p.r < 0) continue;
 
-    ctx.globalAlpha = 1;
+    const breathe = VisorMotion.reduce || s.size <= 2
+      ? 1
+      : 0.86 + 0.14 * (0.5 + 0.5 * Math.sin(time * 0.9 + s.phase));
+    if (s.size > 2 && glowSprite) {
+      const halo = s.size * 6;
+      ctx.globalAlpha = 0.5 * breathe;
+      ctx.drawImage(glowSprite, p.x - halo / 2, p.y - halo / 2, halo, halo);
+    }
+    ctx.globalAlpha = breathe;
     ctx.fillStyle = s.color;
     ctx.beginPath();
     ctx.arc(p.x, p.y, s.size, 0, Math.PI * 2);
     ctx.fill();
-
-    if (s.size > 2.2) {
-      ctx.globalAlpha = 0.28;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, s.size * 2, 0, Math.PI * 2);
-      ctx.fill();
-    }
 
     if (s.spike) {
       const len = s.size * 4;
