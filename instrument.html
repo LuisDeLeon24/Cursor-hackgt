@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es" hidden>
+<head>
+  <script src="js/config.js"></script>
+  <script>
+    if (window.SEXTANT && window.SEXTANT.visor === true) {
+      document.documentElement.hidden = false;
+    } else {
+      location.replace('/');
+    }
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#F6F0E4" />
+  <title>TelescopioAR: El Telescopio del Siglo XXI</title>
+  <meta name="description" content="Telescopio de Realidad Aumentada: rastrea la ISS y el Hubble en tiempo real con SGP4 sobre la cámara de tu dispositivo." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='36' fill='none' stroke='%231C1008' stroke-width='6'/%3E%3Cpath d='M50 14 v18 M50 68 v18 M14 50 h18 M68 50 h18' stroke='%237A5B24' stroke-width='5'/%3E%3C/svg%3E" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="overflow-hidden select-none">
+
+  <div id="space-backdrop" class="fixed inset-0" aria-hidden="true"></div>
+  <video id="camera-feed" autoplay playsinline muted class="fixed inset-0 w-full h-full object-cover"></video>
+  <div id="camera-tint" class="fixed inset-0 pointer-events-none"></div>
+
+  <canvas id="sky-canvas" class="fixed inset-0 touch-none"></canvas>
+
+  <div id="vignette" class="fixed inset-0 pointer-events-none"></div>
+
+  <button id="btn-calibrate" class="calibrate-btn fixed" type="button"
+          title="Otorga permiso al giroscopio y la brújula para el modo AR">
+    <svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 16.5a7 7 0 0 1 14 0" fill="none" stroke="currentColor" stroke-width="1.25"/>
+      <path d="M12 16.5 V9" fill="none" stroke="currentColor" stroke-width="1.25"/>
+      <circle cx="12" cy="16.5" r="1.2" fill="currentColor"/>
+    </svg>
+    <span id="btn-calibrate-label">Calibrar telescopio</span>
+  </button>
+
+  <section id="panel-status" class="ui-panel fixed z-20" aria-label="Bitácora">
+    <h2 class="panel-title">
+      <svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 6h6.2A2.3 2.3 0 0 1 12.5 8.3V19H6.3A2.3 2.3 0 0 0 4 21.3zM20 6h-6.2A2.3 2.3 0 0 0 11.5 8.3V19h6.2A2.3 2.3 0 0 1 20 21.3z" fill="none" stroke="currentColor" stroke-width="1.25"/>
+      </svg>
+      Bitácora
+    </h2>
+    <dl class="kv">
+      <dt>Lat</dt><dd id="obs-lat">--.----</dd>
+      <dt>Lon</dt><dd id="obs-lon">--.----</dd>
+      <dt>UTC</dt><dd id="clock-utc">--:--:--</dd>
+      <dt>Modo</dt><dd id="mode-label">Manual</dd>
+    </dl>
+  </section>
+
+  <section id="panel-sats" class="ui-panel fixed z-20" aria-label="Contactos">
+    <h2 class="panel-title">
+      Contactos
+      <svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="7" cy="15" r="1.3" fill="currentColor"/>
+        <circle cx="17" cy="8" r="1.3" fill="currentColor"/>
+        <path d="M8.3 14.2c1.8-2.6 5.2-3.6 7.4-5" fill="none" stroke="currentColor" stroke-width="1.25"/>
+      </svg>
+    </h2>
+    <div id="sat-list">
+      <p class="is-down">Escuchando…</p>
+    </div>
+  </section>
+
+  <section id="panel-bearing" class="ui-panel fixed z-20" aria-label="Rumbo">
+    <dl class="kv">
+      <dt>Rumbo</dt><dd id="bearing-az">000°</dd>
+      <dt>Elev</dt><dd id="bearing-el">+00°</dd>
+    </dl>
+  </section>
+
+  <div id="panel-controls" class="ui-panel fixed z-20" role="toolbar" aria-label="Controles">
+    <button id="btn-prev-star" class="brass-btn" type="button" title="Astro anterior">Anterior</button>
+    <button id="btn-next-star" class="brass-btn" type="button" title="Astro siguiente">Siguiente</button>
+    <button id="btn-mode" class="brass-btn" type="button" title="Alternar sensores y arrastre manual" aria-pressed="false">Manual</button>
+    <button id="btn-sound" class="brass-btn" type="button" title="Sonido del mar" aria-pressed="false">Sonido</button>
+  </div>
+
+  <section id="panel-star" class="ui-panel hidden fixed z-20" aria-label="Astro identificado">
+    <div class="star-head">
+      <h2 id="star-name">—</h2>
+      <button id="btn-star-close" class="text-btn" type="button" title="Soltar el astro">Cerrar</button>
+    </div>
+    <p id="star-constellation">—</p>
+    <p id="star-data">—</p>
+    <p id="star-lore">—</p>
+  </section>
+
+  <section id="panel-map" class="ui-panel fixed z-20" aria-label="Carta">
+    <div class="map-head" title="Plegar o desplegar la carta">
+      <h2 class="panel-title">
+        <svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 8 9 6l6 2 5-2v10l-5 2-6-2-5 2z" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+          <path d="M9 6v10M15 8v10" fill="none" stroke="currentColor" stroke-width="1.25"/>
+        </svg>
+        Carta
+      </h2>
+      <button id="map-toggle" class="map-toggle" type="button" title="Plegar o desplegar la carta" aria-expanded="true">Ocultar</button>
+    </div>
+    <div class="map-body">
+      <canvas id="map-canvas" width="252" height="126"></canvas>
+      <p id="map-readout" class="map-readout">ISS  --.-°  --.-°</p>
+    </div>
+  </section>
+
+  <div id="start-overlay" class="fixed inset-0 z-50 flex items-center justify-center">
+    <div class="start-frame">
+      <svg class="mark mark-lg" viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="16" cy="16" r="11.5" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M16 4.5v5M16 22.5v5M4.5 16h5M22.5 16h5" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M16 8.2 17.15 14.8h-2.3z" fill="currentColor"/>
+      </svg>
+      <h1>El Telescopio Digital</h1>
+      <p class="lede">
+        Alza el instrumento al cielo. La Estación Espacial y el Hubble van a 27&nbsp;000 km/h.
+        Apunta la mira y mantén el satélite en ella para interceptar su transmisión.
+      </p>
+      <button id="btn-start" class="btn-primary" type="button">Iniciar travesía</button>
+      <p class="start-note">
+        Se pedirá cámara, giroscopio y posición para el modo AR. Las órbitas usan SGP4 con TLE de NORAD.
+      </p>
+    </div>
+  </div>
+
+  <div id="terminal-overlay" class="fixed inset-0 z-40 hidden items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="dispatch-title">
+    <div class="terminal-frame">
+      <div class="terminal-header">
+        <h2 id="dispatch-title">
+          <svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.25"/>
+            <circle cx="12" cy="12" r="3.5" fill="none" stroke="currentColor" stroke-width="1.25"/>
+            <path d="M12 4.5v3M12 16.5v3" fill="none" stroke="currentColor" stroke-width="1.25"/>
+          </svg>
+          Despacho interceptado
+        </h2>
+        <button id="btn-terminal-close" class="text-btn" type="button">Guardar en bitácora</button>
+      </div>
+      <pre id="terminal-body"></pre>
+    </div>
+  </div>
+
+  <div id="noise-overlay" class="fixed inset-0 pointer-events-none"></div>
+
+  <script src="js/starfield.js"></script>
+  <script src="js/sensors.js"></script>
+  <script src="js/orbits.js"></script>
+  <script src="js/worldmap.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
